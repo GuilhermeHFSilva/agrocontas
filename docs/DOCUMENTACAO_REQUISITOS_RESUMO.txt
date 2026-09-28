@@ -1,0 +1,146 @@
+================================================================================
+AGROCONTAS — SISTEMA DE GESTÃO FINANCEIRA RURAL
+RESUMO EXECUTIVO DE ESPECIFICAÇÃO DE REQUISITOS (VERSÃO OFICIAL 1.0)
+Instituição: Universidade de Rio Verde (UniRV)
+Disciplina: Desenvolvimento Orientado a Objetos (DOO)
+Autores: Equipe de Desenvolvimento AgroContas
+Ano: 2026
+================================================================================
+
+AVISO PARA AGENTES DE INTELIGÊNCIA ARTIFICIAL:
+Este documento é a FONTE DE VERDADE para qualquer implementação no projeto AgroContas.
+Todas as classes, tabelas de banco de dados, endpoints de API e interfaces de usuário
+DEVEM seguir estritamente as especificações abaixo.
+
+--------------------------------------------------------------------------------
+1. MISSÃO DO PRODUTO
+--------------------------------------------------------------------------------
+Solução de gestão financeira para produtores rurais familiares e gestores do
+agronegócio, permitindo o controle rigoroso de contas a pagar e contas a receber.
+Possui como diferencial a extração automática de dados de faturas e Notas Fiscais
+em PDF através de Inteligência Artificial (Google Gemini), com categorização
+de despesas, controle de parcelamentos e registro de quitações financeiras.
+
+--------------------------------------------------------------------------------
+2. OS 7 REQUISITOS FUNCIONAIS (CANÔNICOS DA DISCIPLINA)
+--------------------------------------------------------------------------------
+RF01 — Manter Fornecedor / Cliente:
+  CRUD completo de pessoas físicas e jurídicas parceiras do agronegócio
+  (fornecedores de insumos/serviços e clientes compradores da produção).
+
+RF02 — Manter Despesas / Receitas:
+  CRUD do plano de contas contábil e categorias operacionais da propriedade
+  rural (ex.: fertilizantes, defensivos, diesel, venda de safra).
+
+RF03 — Manter MovimentoContas:
+  Gerenciamento dos títulos mestre de Contas a Pagar e Contas a Receber.
+  Cada conta vincula obrigatoriamente: Fornecedor (FK), Faturado/Titular (FK)
+  e Categoria de Despesa/Receita (FK).
+
+RF04 — Manter MovimentoParcelas:
+  Gerenciamento do desdobramento da conta em parcelas a prazo, controlando
+  número da parcela, datas de vencimento, valor da parcela e saldo residual.
+
+RF05 — Manter MovimentoFinanceiro (Quitação):
+  Registro de baixas, pagamentos e liquidações das parcelas, controlando
+  data do pagamento, valor pago, juros/multa, descontos e comprovantes.
+
+RF06 — Fazer Upload do Documento:
+  Interface de envio de arquivos digitais em PDF (NF-e, DANFE, boletos).
+
+RF07 — Extrair Dados do Documento:
+  Motor de IA/OCR que analisa o PDF, extrai automaticamente os dados cadastrais,
+  valores e parcelas, e disponibiliza em Split-View para conferência do operador.
+
+--------------------------------------------------------------------------------
+3. MODELO ENTIDADE-RELACIONAMENTO (DER) — 5 ENTIDADES NORMATIVAS
+--------------------------------------------------------------------------------
+
+TABELA 1: FORNECEDOR_CLIENTE
+  - id_pessoa : INT (PRIMARY KEY, AUTO_INCREMENT)
+  - razao_social : VARCHAR(120) NOT NULL
+  - nome_fantasia : VARCHAR(120)
+  - cpf_cnpj : VARCHAR(18) NOT NULL UNIQUE
+  - tipo_pessoa : ENUM('FISICA', 'JURIDICA') NOT NULL
+  - classificacao : ENUM('FORNECEDOR', 'CLIENTE', 'AMBOS') NOT NULL
+  - telefone : VARCHAR(20)
+  - email : VARCHAR(80)
+  - status : ENUM('ATIVO', 'INATIVO') DEFAULT 'ATIVO'
+
+TABELA 2: DESPESAS_RECEITAS
+  - id_categoria : INT (PRIMARY KEY, AUTO_INCREMENT)
+  - descricao : VARCHAR(80) NOT NULL
+  - tipo : ENUM('DESPESA', 'RECEITA') NOT NULL
+  - grupo_operacional : VARCHAR(60)
+  - centro_custo : VARCHAR(60)
+  - status : ENUM('ATIVO', 'INATIVO') DEFAULT 'ATIVO'
+
+TABELA 3: MOVIMENTO_CONTAS
+  - id_conta : INT (PRIMARY KEY, AUTO_INCREMENT)
+  - id_despesa_receita : INT NOT NULL (FOREIGN KEY -> DESPESAS_RECEITAS.id_categoria)
+  - id_fornecedor : INT NOT NULL (FOREIGN KEY -> FORNECEDOR_CLIENTE.id_pessoa)
+  - id_faturado : INT NOT NULL (FOREIGN KEY -> FORNECEDOR_CLIENTE.id_pessoa)
+  - numero_documento : VARCHAR(44) NOT NULL
+  - data_emissao : DATE NOT NULL
+  - data_vencimento : DATE NOT NULL
+  - valor_total : DECIMAL(12,2) NOT NULL
+  - descricao : VARCHAR(255)
+  - tipo_operacao : ENUM('PAGAR', 'RECEBER') NOT NULL
+  - origem_documento : ENUM('MANUAL', 'EXTRACAO_PDF') DEFAULT 'MANUAL'
+  - status : ENUM('ABERTA', 'QUITADA', 'CANCELADA') DEFAULT 'ABERTA'
+
+TABELA 4: MOVIMENTO_PARCELAS
+  - id_parcela : INT (PRIMARY KEY, AUTO_INCREMENT)
+  - id_movimento_conta : INT NOT NULL (FOREIGN KEY -> MOVIMENTO_CONTAS.id_conta)
+  - numero_parcela : INT NOT NULL
+  - data_vencimento : DATE NOT NULL
+  - valor_parcela : DECIMAL(12,2) NOT NULL
+  - valor_saldo : DECIMAL(12,2) NOT NULL
+  - status : ENUM('PENDENTE', 'PARCIAL', 'LIQUIDADA') DEFAULT 'PENDENTE'
+
+TABELA 5: MOVIMENTO_FINANCEIRO
+  - id_movimento : INT (PRIMARY KEY, AUTO_INCREMENT)
+  - id_movimento_parcela : INT NOT NULL (FOREIGN KEY -> MOVIMENTO_PARCELAS.id_parcela)
+  - data_movimento : DATE NOT NULL
+  - valor_pago : DECIMAL(12,2) NOT NULL
+  - juros_multa : DECIMAL(12,2) DEFAULT 0.00
+  - desconto : DECIMAL(12,2) DEFAULT 0.00
+  - forma_pagamento : VARCHAR(40) NOT NULL (ex: 'PIX', 'BOLETO', 'TED')
+  - comprovante : VARCHAR(255)
+  - status : ENUM('CONFIRMADO', 'ESTORNADO') DEFAULT 'CONFIRMADO'
+
+--------------------------------------------------------------------------------
+4. PADRÃO MANDATÁRIO DE INTERFACE PARA OPERAÇÕES "MANTER"
+--------------------------------------------------------------------------------
+REGRA DE OURO DA DISCIPLINA (DOO/UniRV):
+Para todos os casos de uso do tipo "MANTER" (RF01, RF02, RF03, RF04, RF05):
+1. A PRIMEIRA TELA apresentada ao usuário DEVE SER SEMPRE A LISTAGEM / DATAGRID.
+2. A tela de listagem deve conter:
+   - Filtros de pesquisa no topo (ex.: texto, status ativo/inativo, datas).
+   - Tabela (DataGrid) exibindo os registros cadastrados com paginação ou ordenação.
+   - Botões de ação visíveis:
+     * "Consultar" (dispara a busca com os filtros informados)
+     * "Incluir Novo" (abre o formulário ou modal de cadastro)
+     * "Alterar Selecionado" (abre o formulário preenchido para edição)
+     * "Desativar / Reativar" (muda o status lógico sem exclusão física)
+3. Formulários de inclusão/edição abrem em página própria ou modal, e após salvar
+   retornam obrigatoriamente para a tela de listagem atualizada.
+
+--------------------------------------------------------------------------------
+5. FLUXO DE INTEGRAÇÃO DA EXTRAÇÃO DE DOCUMENTOS (RF06 + RF07 -> RF03 + RF04)
+--------------------------------------------------------------------------------
+1. Usuário faz upload de PDF (RF06) via drag-and-drop ou seletor de arquivos.
+2. Backend processa o buffer com a API Google Gemini (modelo gemini-3.6-flash).
+3. Gemini extrai dados estruturados conforme o nfeResponseSchema:
+   - Fornecedor (Razão Social, Nome Fantasia, CNPJ)
+   - Faturado (Nome Completo, CPF/CNPJ)
+   - Conta (Número da NF, Emissão, Vencimento, Valor Total, Categoria)
+   - Parcelas (Array com número, vencimento, valor de cada parcela)
+4. Frontend apresenta os dados em Split-View (PDF na esquerda, dados na direita)
+   para conferência e auditoria do operador humano.
+5. Ao confirmar, o sistema realiza a persistência relacional:
+   - Cadastra/identifica o Fornecedor e o Faturado em FORNECEDOR_CLIENTE;
+   - Cadastra/identifica a Despesa em DESPESAS_RECEITAS;
+   - Insere o registro mestre em MOVIMENTO_CONTAS;
+   - Insere as parcelas vinculadas em MOVIMENTO_PARCELAS.
+================================================================================
