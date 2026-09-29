@@ -2,6 +2,31 @@ import { Request, Response } from "express";
 import { geminiService } from "../services/geminiService";
 import { ApiResponse, NfeExtracao } from "../types/nfe";
 import { env } from "../config/env";
+import { AppError, getErrorMessage } from "../utils/errorHandler";
+
+function extractCustomApiKey(req: Request): string | undefined {
+  const headerKey = req.headers["x-gemini-api-key"];
+  if (typeof headerKey === "string" && headerKey.trim().length > 0) {
+    return headerKey.trim();
+  }
+  const bodyKey = req.body?.apiKey;
+  if (typeof bodyKey === "string" && bodyKey.trim().length > 0) {
+    return bodyKey.trim();
+  }
+  return undefined;
+}
+
+function extractCustomModel(req: Request): string | undefined {
+  const headerModel = req.headers["x-gemini-model"];
+  if (typeof headerModel === "string" && headerModel.trim().length > 0) {
+    return headerModel.trim();
+  }
+  const bodyModel = req.body?.model;
+  if (typeof bodyModel === "string" && bodyModel.trim().length > 0) {
+    return bodyModel.trim();
+  }
+  return undefined;
+}
 
 export class NfeController {
   async extractNfe(
@@ -17,8 +42,8 @@ export class NfeController {
         return;
       }
 
-      const customApiKey = (req.headers["x-gemini-api-key"] as string) || (req.body?.apiKey as string) || undefined;
-      const customModel = (req.headers["x-gemini-model"] as string) || (req.body?.model as string) || undefined;
+      const customApiKey = extractCustomApiKey(req);
+      const customModel = extractCustomModel(req);
 
       const dadosExtraidos = await geminiService.extrairDadosNfe(
         req.file.buffer,
@@ -31,21 +56,24 @@ export class NfeController {
         message: "Dados extraídos e classificados com sucesso.",
         data: dadosExtraidos,
       });
-    } catch (error: any) {
-      const errorMessage =
-        error?.message || "Ocorreu um erro interno ao processar a nota fiscal com o Gemini.";
+    } catch (error: unknown) {
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      const errorMessage = getErrorMessage(error);
 
-      res.status(500).json({
+      res.status(statusCode).json({
         success: false,
         error: errorMessage,
       });
     }
   }
 
-  async testConfig(req: Request, res: Response<ApiResponse<{ model: string }>>): Promise<void> {
+  async testConfig(
+    req: Request,
+    res: Response<ApiResponse<{ model: string }>>
+  ): Promise<void> {
     try {
-      const customApiKey = (req.headers["x-gemini-api-key"] as string) || (req.body?.apiKey as string) || undefined;
-      const customModel = (req.headers["x-gemini-model"] as string) || (req.body?.model as string) || undefined;
+      const customApiKey = extractCustomApiKey(req);
+      const customModel = extractCustomModel(req);
 
       const result = await geminiService.testConnection(customApiKey, customModel);
 
@@ -54,15 +82,19 @@ export class NfeController {
         message: "Conexão com o Gemini realizada com sucesso.",
         data: { model: result.model },
       });
-    } catch (error: any) {
-      res.status(400).json({
+    } catch (error: unknown) {
+      const statusCode = error instanceof AppError ? error.statusCode : 400;
+      res.status(statusCode).json({
         success: false,
-        error: error?.message || "Falha ao validar a chave da API do Gemini.",
+        error: getErrorMessage(error),
       });
     }
   }
 
-  async getConfig(_req: Request, res: Response<ApiResponse<{ hasServerKey: boolean; defaultModel: string }>>): Promise<void> {
+  async getConfig(
+    _req: Request,
+    res: Response<ApiResponse<{ hasServerKey: boolean; defaultModel: string }>>
+  ): Promise<void> {
     res.status(200).json({
       success: true,
       data: {
