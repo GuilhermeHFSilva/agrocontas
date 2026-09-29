@@ -1,31 +1,44 @@
 import { ApiResponse, AppSettings, NfeExtracao } from "../types/nfe";
 
 const STORAGE_KEY = "agrocontas_settings";
+const DEFAULT_MODEL = "gemini-3.6-flash";
+
+function getFallbackApiUrl(): string {
+  return import.meta.env.VITE_API_URL || "";
+}
+
+function buildEndpoint(baseUrl: string, endpointPath: string): string {
+  const normalizedBase = baseUrl.trim().replace(/\/+$/, "");
+  const normalizedPath = endpointPath.startsWith("/") ? endpointPath : `/${endpointPath}`;
+  return `${normalizedBase}${normalizedPath}`;
+}
 
 export function getSettings(): AppSettings {
-  const defaultApiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+  const defaultApiUrl = getFallbackApiUrl();
   const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      return {
-        geminiApiKey: parsed.geminiApiKey || "",
-        geminiModel: parsed.geminiModel || "gemini-3.6-flash",
-        apiUrl: parsed.apiUrl || defaultApiUrl,
-      };
-    } catch {
-      return {
-        geminiApiKey: "",
-        geminiModel: "gemini-3.6-flash",
-        apiUrl: defaultApiUrl,
-      };
-    }
+
+  if (!saved) {
+    return {
+      geminiApiKey: "",
+      geminiModel: DEFAULT_MODEL,
+      apiUrl: defaultApiUrl,
+    };
   }
-  return {
-    geminiApiKey: "",
-    geminiModel: "gemini-3.6-flash",
-    apiUrl: defaultApiUrl,
-  };
+
+  try {
+    const parsed = JSON.parse(saved);
+    return {
+      geminiApiKey: parsed.geminiApiKey || "",
+      geminiModel: parsed.geminiModel || DEFAULT_MODEL,
+      apiUrl: parsed.apiUrl !== undefined ? parsed.apiUrl : defaultApiUrl,
+    };
+  } catch {
+    return {
+      geminiApiKey: "",
+      geminiModel: DEFAULT_MODEL,
+      apiUrl: defaultApiUrl,
+    };
+  }
 }
 
 export function saveSettings(settings: Partial<AppSettings>): AppSettings {
@@ -38,20 +51,25 @@ export function saveSettings(settings: Partial<AppSettings>): AppSettings {
   return updated;
 }
 
+function createGeminiHeaders(apiKey?: string, model?: string): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (apiKey && apiKey.trim().length > 0) {
+    headers["x-gemini-api-key"] = apiKey.trim();
+  }
+  if (model && model.trim().length > 0) {
+    headers["x-gemini-model"] = model.trim();
+  }
+  return headers;
+}
+
 export async function extractNfe(file: File): Promise<NfeExtracao> {
   const settings = getSettings();
   const formData = new FormData();
   formData.append("file", file);
 
-  const headers: Record<string, string> = {};
-  if (settings.geminiApiKey) {
-    headers["x-gemini-api-key"] = settings.geminiApiKey;
-  }
-  if (settings.geminiModel) {
-    headers["x-gemini-model"] = settings.geminiModel;
-  }
+  const headers = createGeminiHeaders(settings.geminiApiKey, settings.geminiModel);
+  const endpoint = buildEndpoint(settings.apiUrl, "/api/nfe/extract");
 
-  const endpoint = `${settings.apiUrl.replace(/\/+$/, "")}/api/nfe/extract`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers,
@@ -74,15 +92,9 @@ export async function testConfig(
   const keyToTest = apiKey !== undefined ? apiKey : settings.geminiApiKey;
   const modelToTest = model !== undefined ? model : settings.geminiModel;
 
-  const headers: Record<string, string> = {};
-  if (keyToTest) {
-    headers["x-gemini-api-key"] = keyToTest;
-  }
-  if (modelToTest) {
-    headers["x-gemini-model"] = modelToTest;
-  }
+  const headers = createGeminiHeaders(keyToTest, modelToTest);
+  const endpoint = buildEndpoint(settings.apiUrl, "/api/nfe/test-config");
 
-  const endpoint = `${settings.apiUrl.replace(/\/+$/, "")}/api/nfe/test-config`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers,
@@ -98,11 +110,16 @@ export async function testConfig(
 
 export async function getServerConfig(): Promise<{ hasServerKey: boolean; defaultModel: string }> {
   const settings = getSettings();
-  const endpoint = `${settings.apiUrl.replace(/\/+$/, "")}/api/nfe/config`;
-  const response = await fetch(endpoint);
-  const data: ApiResponse<{ hasServerKey: boolean; defaultModel: string }> = await response.json();
-  if (!response.ok || !data.success || !data.data) {
-    return { hasServerKey: false, defaultModel: "gemini-3.6-flash" };
+  const endpoint = buildEndpoint(settings.apiUrl, "/api/nfe/config");
+
+  try {
+    const response = await fetch(endpoint);
+    const data: ApiResponse<{ hasServerKey: boolean; defaultModel: string }> = await response.json();
+    if (!response.ok || !data.success || !data.data) {
+      return { hasServerKey: false, defaultModel: DEFAULT_MODEL };
+    }
+    return data.data;
+  } catch {
+    return { hasServerKey: false, defaultModel: DEFAULT_MODEL };
   }
-  return data.data;
 }

@@ -1,15 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { env } from "../config/env";
 import { nfeResponseSchema } from "../schemas/nfeSchema";
 import {
   NFE_EXTRACTION_SYSTEM_INSTRUCTION,
   NFE_EXTRACTION_USER_PROMPT,
 } from "./promptTemplate";
-import { NfeExtracao } from "../types/nfe";
-import { uint8ArrayToBase64 } from "../utils/binaryConverter";
-import { AppError } from "../utils/errorHandler";
+import { NfeExtracao } from "../../src/types/nfe";
+import { arrayBufferToBase64 } from "../utils/binaryConverter";
 
-const DEFAULT_FALLBACK_MODEL = "gemini-3.6-flash";
+const DEFAULT_MODEL = "gemini-3.6-flash";
 
 function sanitizeJsonMarkdown(rawResponseText: string): string {
   return rawResponseText
@@ -24,32 +22,26 @@ function parseExtractionResponse(rawText: string): NfeExtracao {
     const cleanJson = sanitizeJsonMarkdown(rawText);
     return JSON.parse(cleanJson) as NfeExtracao;
   } catch {
-    throw new AppError("Falha ao processar o formato JSON retornado pela inteligência artificial.", 502);
+    throw new Error("Falha ao processar o formato JSON retornado pela inteligência artificial.");
   }
 }
 
 export class GeminiService {
-  private createClient(customApiKey?: string): GoogleGenerativeAI {
-    const effectiveKey = customApiKey || env.GEMINI_API_KEY;
-    if (!effectiveKey) {
-      throw new AppError(
-        "Chave da API do Gemini não configurada. Configure na aba de Configurações ou no arquivo .env.",
-        400
+  private createClient(apiKey: string): GoogleGenerativeAI {
+    if (!apiKey) {
+      throw new Error(
+        "Chave da API do Gemini não configurada. Informe a chave no cabeçalho ou nas variáveis de ambiente."
       );
     }
-    return new GoogleGenerativeAI(effectiveKey);
-  }
-
-  private resolveModelName(customModel?: string): string {
-    return customModel || env.GEMINI_MODEL || DEFAULT_FALLBACK_MODEL;
+    return new GoogleGenerativeAI(apiKey);
   }
 
   async testConnection(
-    customApiKey?: string,
-    customModel?: string
+    apiKey: string,
+    modelName: string = DEFAULT_MODEL
   ): Promise<{ success: boolean; model: string }> {
-    const client = this.createClient(customApiKey);
-    const targetModel = this.resolveModelName(customModel);
+    const client = this.createClient(apiKey);
+    const targetModel = modelName || DEFAULT_MODEL;
     const model = client.getGenerativeModel({ model: targetModel });
 
     await model.generateContent("ping");
@@ -57,12 +49,12 @@ export class GeminiService {
   }
 
   async extrairDadosNfe(
-    pdfData: Uint8Array | ArrayBuffer,
-    customApiKey?: string,
-    customModel?: string
+    fileBuffer: ArrayBuffer | Uint8Array,
+    apiKey: string,
+    modelName: string = DEFAULT_MODEL
   ): Promise<NfeExtracao> {
-    const client = this.createClient(customApiKey);
-    const targetModel = this.resolveModelName(customModel);
+    const client = this.createClient(apiKey);
+    const targetModel = modelName || DEFAULT_MODEL;
 
     const model = client.getGenerativeModel({
       model: targetModel,
@@ -76,7 +68,7 @@ export class GeminiService {
 
     const pdfPart = {
       inlineData: {
-        data: uint8ArrayToBase64(pdfData),
+        data: arrayBufferToBase64(fileBuffer),
         mimeType: "application/pdf",
       },
     };
@@ -88,7 +80,7 @@ export class GeminiService {
 
     const responseText = result.response.text();
     if (!responseText) {
-      throw new AppError("A API do Gemini retornou uma resposta vazia.", 502);
+      throw new Error("A API do Gemini retornou uma resposta vazia.");
     }
 
     return parseExtractionResponse(responseText);
