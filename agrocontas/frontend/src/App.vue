@@ -15,6 +15,7 @@ const loading = ref(false);
 const errorMessage = ref("");
 const extractedData = ref<NfeExtracao | null>(null);
 const hasApiKey = ref(true);
+const activeModel = ref("gemini-3.6-flash");
 
 onMounted(async () => {
   await checkKeyAvailability();
@@ -22,6 +23,9 @@ onMounted(async () => {
 
 async function checkKeyAvailability() {
   const settings = getSettings();
+  if (settings.geminiModel) {
+    activeModel.value = settings.geminiModel;
+  }
   if (settings.geminiApiKey) {
     hasApiKey.value = true;
     return;
@@ -29,6 +33,9 @@ async function checkKeyAvailability() {
   try {
     const srv = await getServerConfig();
     hasApiKey.value = srv.hasServerKey;
+    if (srv.defaultModel) {
+      activeModel.value = srv.defaultModel;
+    }
   } catch {
     hasApiKey.value = false;
   }
@@ -59,121 +66,279 @@ async function handleExtract() {
 </script>
 
 <template>
-  <div class="app-container">
-    <header class="app-header">
-      <div class="app-brand">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-        </svg>
-        AgroContas
+  <div class="min-h-screen bg-surface font-body text-on-surface">
+    <!-- Top Context Strip / Architectural Header -->
+    <header class="bg-surface-bright border-b-2 border-outline px-4 sm:px-8 py-3 sticky top-0 z-40">
+      <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-primary-container border-2 border-outline flex items-center justify-center font-headline font-black text-lg text-on-primary-container shadow-[2px_2px_0px_#1a1a1a]">
+            AC
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-headline font-black text-base uppercase tracking-tight text-on-surface leading-none">
+                AgroContas
+              </span>
+              <span class="inline-block w-2.5 h-2.5 bg-primary-fixed border border-outline"></span>
+              <span class="bg-surface-container border border-outline px-1.5 py-0.2 text-[10px] font-mono font-bold">
+                CORE v1.0
+              </span>
+            </div>
+            <div class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant font-bold mt-0.5">
+              Gestão Financeira Rural • DOO UniRV
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-4 flex-wrap">
+          <div class="flex items-center gap-1.5 px-2.5 py-1 bg-surface-container border border-outline text-[11px] font-headline font-bold uppercase text-on-surface">
+            <span>Motor:</span>
+            <span class="bg-primary-container px-1 font-mono text-[10px] text-on-primary-container">
+              {{ activeModel }}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2 px-2.5 py-1 bg-surface-container-lowest border-2 border-outline shadow-[2px_2px_0px_#1a1a1a]">
+            <span
+              class="inline-block w-2.5 h-2.5 border border-outline"
+              :class="hasApiKey ? 'bg-primary-fixed' : 'bg-secondary'"
+            ></span>
+            <span class="text-[10px] font-headline font-bold uppercase tracking-tight text-on-surface">
+              {{ hasApiKey ? 'API Ativa' : 'Sem Chave' }}
+            </span>
+          </div>
+
+          <button
+            class="px-2.5 py-1 text-[11px] font-headline font-bold uppercase border-2 border-outline bg-surface-variant hover:bg-outline hover:text-surface shadow-[2px_2px_0px_#1a1a1a] transition-none flex items-center gap-1"
+            @click="activeNavTab = activeNavTab === 'settings' ? 'extract' : 'settings'"
+          >
+            <span class="material-symbols-outlined text-sm">
+              {{ activeNavTab === 'settings' ? 'arrow_back' : 'tune' }}
+            </span>
+            <span>{{ activeNavTab === 'settings' ? 'Voltar' : 'Configurações' }}</span>
+          </button>
+        </div>
       </div>
-      <h1 class="app-title">Extração de Dados de Nota Fiscal</h1>
-      <p class="app-subtitle">
-        Carregue um PDF de nota fiscal e extraia os dados automaticamente usando IA
-      </p>
     </header>
 
-    <nav class="nav-tabs">
-      <button
-        class="nav-tab-btn"
-        :class="{ active: activeNavTab === 'extract' }"
-        @click="activeNavTab = 'extract'"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-        </svg>
-        Extração de NF-e
-      </button>
+    <!-- Main Content Canvas -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-8 py-6">
+      <!-- Session Bar / Scope Strip -->
+      <div class="w-full bg-surface-container-high border-2 border-outline p-4 mb-6 shadow-[4px_4px_0px_#1a1a1a]">
+        <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-primary-container border-2 border-outline flex items-center justify-center shadow-[2px_2px_0px_#1a1a1a]">
+              <span class="material-symbols-outlined text-2xl font-bold">description</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h1 class="text-lg sm:text-xl font-headline font-black uppercase tracking-tight text-on-surface">
+                  Ingestão e Extração de Documentos Fiscais
+                </h1>
+              </div>
+              <p class="text-xs font-mono text-on-surface-variant uppercase mt-0.5">
+                Módulos Canônicos RF06 (Upload) e RF07 (Processamento Semântico com IA)
+              </p>
+            </div>
+          </div>
 
-      <button
-        class="nav-tab-btn"
-        :class="{ active: activeNavTab === 'settings' }"
-        @click="activeNavTab = 'settings'"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-        </svg>
-        Configurações
-        <span
-          v-if="!hasApiKey"
-          style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"
-          title="Chave API ausente"
-        ></span>
-      </button>
-    </nav>
-
-    <div v-if="activeNavTab === 'extract'">
-      <div v-if="!hasApiKey" class="banner-alert banner-warning">
-        <div>
-          <strong>Atenção:</strong> Chave da API do Google Gemini não identificada. Configure na aba de Configurações para processar seus arquivos.
+          <div class="flex items-center gap-2 flex-wrap text-xs font-mono">
+            <div class="px-3 py-1.5 bg-surface border-2 border-outline font-headline font-bold uppercase flex items-center gap-1.5 shadow-[2px_2px_0px_#1a1a1a]">
+              <span class="text-on-surface-variant font-mono">Documento:</span>
+              <span class="font-bold">{{ selectedFile ? selectedFile.name : 'Nenhum' }}</span>
+            </div>
+            <div
+              v-if="extractedData"
+              class="px-3 py-1.5 bg-primary-container border-2 border-outline font-headline font-bold uppercase flex items-center gap-1.5 shadow-[2px_2px_0px_#1a1a1a]"
+            >
+              <span>Status:</span>
+              <span class="font-black text-on-primary-container">Extração Concluída</span>
+            </div>
+          </div>
         </div>
-        <button class="btn-secondary" style="padding: 0.4rem 0.85rem;" @click="activeNavTab = 'settings'">
-          Ir para Configurações
+      </div>
+
+      <!-- Primary Tab Switcher (Architectural Header) -->
+      <div class="flex flex-wrap items-end gap-1 mb-0 border-b-2 border-outline">
+        <button
+          class="border-2 border-outline border-b-0 px-6 py-3 font-headline text-xs uppercase tracking-wider transition-none flex items-center gap-2 cursor-pointer"
+          :class="activeNavTab === 'extract'
+            ? 'bg-[#FFE600] font-black text-on-surface shadow-[4px_0px_0px_#1a1a1a] -mb-[2px] z-10'
+            : 'bg-surface-container font-bold text-on-surface-variant hover:bg-surface-container-highest'"
+          @click="activeNavTab = 'extract'"
+        >
+          <span class="material-symbols-outlined text-base">document_scanner</span>
+          <span>Extração de NF-e (PDF)</span>
+          <span
+            v-if="extractedData"
+            class="bg-primary text-on-primary px-1.5 py-0.5 text-[10px] font-mono font-bold"
+          >
+            Pronto
+          </span>
+        </button>
+
+        <button
+          class="border-2 border-outline border-b-0 px-6 py-3 font-headline text-xs uppercase tracking-wider transition-none flex items-center gap-2 cursor-pointer"
+          :class="activeNavTab === 'settings'
+            ? 'bg-[#FFE600] font-black text-on-surface shadow-[4px_0px_0px_#1a1a1a] -mb-[2px] z-10'
+            : 'bg-surface-container font-bold text-on-surface-variant hover:bg-surface-container-highest'"
+          @click="activeNavTab = 'settings'"
+        >
+          <span class="material-symbols-outlined text-base">settings</span>
+          <span>Configurações da API</span>
+          <span
+            v-if="!hasApiKey"
+            class="bg-secondary text-on-secondary px-1.5 py-0.5 text-[10px] font-mono font-bold uppercase"
+          >
+            Pendente
+          </span>
         </button>
       </div>
 
-      <div v-if="errorMessage" class="banner-alert banner-danger">
-        <div>{{ errorMessage }}</div>
-      </div>
-
-      <FileUpload
-        :loading="loading"
-        :selected-file="selectedFile"
-        @select-file="handleSelectFile"
-        @extract="handleExtract"
-      />
-
-      <div v-if="loading" class="card loading-container">
-        <span class="spinner spinner-green" style="width: 2.5rem; height: 2.5rem;"></span>
-        <div class="loading-text">
-          Enviando documento e analisando dados com o modelo Gemini...
-        </div>
-      </div>
-
-      <div v-if="extractedData && !loading" class="card">
-        <div class="card-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          </svg>
-          Dados Extraídos
-        </div>
-
-        <div class="subtabs-container">
-          <button
-            class="subtab-btn"
-            :class="{ active: activeViewTab === 'formatted' }"
-            @click="activeViewTab = 'formatted'"
+      <!-- Tab Content Area -->
+      <div class="pt-6">
+        <!-- View: Extração -->
+        <div v-if="activeNavTab === 'extract'">
+          <!-- Warning Banner se chave ausente -->
+          <div
+            v-if="!hasApiKey"
+            class="w-full bg-primary-container border-2 border-outline p-4 mb-6 shadow-[4px_4px_0px_#1a1a1a] flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           >
-            Visualização Formatada
-          </button>
-          <button
-            class="subtab-btn"
-            :class="{ active: activeViewTab === 'json' }"
-            @click="activeViewTab = 'json'"
+            <div class="flex items-start sm:items-center gap-3">
+              <span class="material-symbols-outlined text-2xl font-bold">warning</span>
+              <div>
+                <div class="font-headline font-bold text-xs uppercase tracking-wider">
+                  Chave de API do Gemini não detectada
+                </div>
+                <div class="text-xs font-mono mt-0.5">
+                  Configure sua chave de API para habilitar a extração semântica com o modelo Gemini.
+                </div>
+              </div>
+            </div>
+            <button
+              class="bg-primary text-on-primary border-2 border-outline px-4 py-2 text-xs font-headline font-bold uppercase shadow-[2px_2px_0px_#1a1a1a] hover:bg-surface hover:text-on-surface transition-none flex items-center gap-1.5 shrink-0"
+              @click="activeNavTab = 'settings'"
+            >
+              <span class="material-symbols-outlined text-sm">key</span>
+              Configurar Agora
+            </button>
+          </div>
+
+          <!-- Error Alert -->
+          <div
+            v-if="errorMessage"
+            class="w-full bg-secondary-container border-2 border-secondary p-4 mb-6 shadow-[4px_4px_0px_#e63b2e] text-on-surface flex items-start gap-3"
           >
-            JSON
-          </button>
+            <span class="material-symbols-outlined text-xl text-secondary font-bold">error</span>
+            <div class="flex-1">
+              <div class="font-headline font-bold text-xs uppercase tracking-wider text-secondary">
+                Falha no Processamento do Documento
+              </div>
+              <div class="text-xs font-mono mt-1">
+                {{ errorMessage }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Upload Component (RF06) -->
+          <FileUpload
+            :loading="loading"
+            :selected-file="selectedFile"
+            @select-file="handleSelectFile"
+            @extract="handleExtract"
+          />
+
+          <!-- Loading State (Bauhaus Telemetry Monitor) -->
+          <div
+            v-if="loading"
+            class="border-2 border-outline bg-surface-container-lowest p-8 shadow-[5px_5px_0px_#1a1a1a] mb-6 text-center"
+          >
+            <div class="flex flex-col items-center justify-center gap-4">
+              <span class="brutal-spinner brutal-spinner-lg"></span>
+              <div>
+                <div class="font-headline font-bold text-sm uppercase tracking-wider text-on-surface">
+                  Processando Documento Fiscal com IA
+                </div>
+                <div class="text-xs font-mono text-on-surface-variant mt-1">
+                  Enviando PDF • Executando inferência estruturada via {{ activeModel }}
+                </div>
+              </div>
+              <div class="w-full max-w-md bg-surface-variant border border-outline h-2.5 mt-2 overflow-hidden">
+                <div class="h-full bg-primary-fixed animate-pulse w-full"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Extracted Data Viewer (RF07) -->
+          <div v-if="extractedData && !loading" class="mt-8">
+            <!-- Sub-Bar de Visualização -->
+            <div class="bg-surface-container-lowest border-2 border-outline p-4 mb-6 shadow-[4px_4px_0px_#1a1a1a] flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <span class="font-headline font-bold text-xs uppercase tracking-wider text-on-surface flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-sm">visibility</span>
+                  Modo de Exibição:
+                </span>
+                <div class="inline-flex gap-1.5">
+                  <button
+                    class="px-3 py-1.5 text-xs font-headline font-bold uppercase border-2 border-outline transition-none cursor-pointer"
+                    :class="activeViewTab === 'formatted'
+                      ? 'bg-primary text-on-primary shadow-[2px_2px_0px_#1a1a1a]'
+                      : 'bg-surface hover:bg-surface-variant text-on-surface'"
+                    @click="activeViewTab = 'formatted'"
+                  >
+                    Visualização Formatada
+                  </button>
+                  <button
+                    class="px-3 py-1.5 text-xs font-headline font-bold uppercase border-2 border-outline transition-none cursor-pointer"
+                    :class="activeViewTab === 'json'
+                      ? 'bg-primary text-on-primary shadow-[2px_2px_0px_#1a1a1a]'
+                      : 'bg-surface hover:bg-surface-variant text-on-surface'"
+                    @click="activeViewTab = 'json'"
+                  >
+                    JSON Bruto
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 font-mono text-xs text-on-surface-variant">
+                <span class="inline-block w-2 h-2 bg-primary"></span>
+                <span>Nota Fiscal #{{ extractedData.numeroNotaFiscal || 'N/A' }}</span>
+              </div>
+            </div>
+
+            <!-- Formatted Viewer Component -->
+            <FormattedViewer
+              v-if="activeViewTab === 'formatted'"
+              :data="extractedData"
+            />
+
+            <!-- Json Viewer Component -->
+            <JsonViewer
+              v-if="activeViewTab === 'json'"
+              :data="extractedData"
+            />
+          </div>
         </div>
 
-        <FormattedViewer
-          v-if="activeViewTab === 'formatted'"
-          :data="extractedData"
-        />
-
-        <JsonViewer
-          v-if="activeViewTab === 'json'"
-          :data="extractedData"
-        />
+        <!-- View: Configurações -->
+        <div v-else-if="activeNavTab === 'settings'">
+          <SettingsTab @key-updated="checkKeyAvailability" />
+        </div>
       </div>
-    </div>
 
-    <div v-else-if="activeNavTab === 'settings'">
-      <SettingsTab />
-    </div>
+      <!-- Bottom Status Bar -->
+      <footer class="mt-12 bg-surface-container-high border-2 border-outline p-3 flex flex-col sm:flex-row items-center justify-between text-xs font-mono gap-2 shadow-[2px_2px_0px_#1a1a1a]">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 bg-primary-fixed border border-outline"></span>
+          <span class="font-bold">AGROCONTAS TELEMETRY:</span>
+          <span class="text-on-surface-variant">Extração estruturada de DANFE em conformidade com DOO UniRV</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-on-surface-variant">Modelo Ativo: <strong>{{ activeModel }}</strong></span>
+          <span class="hidden md:inline text-outline-variant">|</span>
+          <span class="text-on-surface-variant">Arquitetura: <strong>RESTful + IA Flash</strong></span>
+        </div>
+      </footer>
+    </main>
   </div>
 </template>
