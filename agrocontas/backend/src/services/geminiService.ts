@@ -7,9 +7,15 @@ import {
 } from "./promptTemplate";
 import { NfeExtracao } from "../types/nfe";
 import { uint8ArrayToBase64 } from "../utils/binaryConverter";
-import { AppError } from "../utils/errorHandler";
+import { AppError, getErrorMessage } from "../utils/errorHandler";
 
-const DEFAULT_FALLBACK_MODEL = "gemini-3.6-flash";
+export const DEFAULT_MODEL_ROTATION: string[] = [
+  "gemini-3.5-flash-lite",
+  "gemini-3.1-flash-lite",
+  "gemini-2.5-flash-lite",
+];
+
+const DEFAULT_FALLBACK_MODEL = "gemini-3.5-flash-lite";
 
 function sanitizeJsonMarkdown(rawResponseText: string): string {
   return rawResponseText
@@ -22,9 +28,17 @@ function sanitizeJsonMarkdown(rawResponseText: string): string {
 function parseExtractionResponse(rawText: string): NfeExtracao {
   try {
     const cleanJson = sanitizeJsonMarkdown(rawText);
-    return JSON.parse(cleanJson) as NfeExtracao;
-  } catch {
-    throw new AppError("Falha ao processar o formato JSON retornado pela inteligência artificial.", 502);
+    const parsed = JSON.parse(cleanJson) as NfeExtracao;
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("O conteúdo retornado não é um objeto JSON válido.");
+    }
+    return parsed;
+  } catch (error: unknown) {
+    const detail = getErrorMessage(error);
+    throw new AppError(
+      `Falha ao processar o formato JSON retornado pela inteligência artificial: ${detail}`,
+      502
+    );
   }
 }
 
@@ -40,8 +54,18 @@ export class GeminiService {
     return new GoogleGenerativeAI(effectiveKey);
   }
 
-  private resolveModelName(customModel?: string): string {
-    return customModel || env.GEMINI_MODEL || DEFAULT_FALLBACK_MODEL;
+  private resolveModelRotationSequence(customModel?: string): string[] {
+    const baseModel = (customModel || env.GEMINI_MODEL || DEFAULT_FALLBACK_MODEL).trim();
+
+    if (!DEFAULT_MODEL_ROTATION.includes(baseModel)) {
+      return [baseModel, ...DEFAULT_MODEL_ROTATION];
+    }
+
+    const startIndex = DEFAULT_MODEL_ROTATION.indexOf(baseModel);
+    return [
+      ...DEFAULT_MODEL_ROTATION.slice(startIndex),
+      ...DEFAULT_MODEL_ROTATION.slice(0, startIndex),
+    ];
   }
 
   async testConnection(
@@ -49,11 +73,39 @@ export class GeminiService {
     customModel?: string
   ): Promise<{ success: boolean; model: string }> {
     const client = this.createClient(customApiKey);
-    const targetModel = this.resolveModelName(customModel);
-    const model = client.getGenerativeModel({ model: targetModel });
+    const modelsToTry = this.resolveModelRotationSequence(customModel);
 
-    await model.generateContent("ping");
-    return { success: true, model: targetModel };
+    let modelIndex = 0;
+    let attempt = 1;
+
+    while (true) {
+      const targetModel = modelsToTry[modelIndex];
+      try {
+        console.log(
+          `[GeminiService.testConnection] Tentativa ${attempt}: testando conexão com modelo '${targetModel}'...`
+        );
+        const model = client.getGenerativeModel({ model: targetModel });
+        await model.generateContent("ping");
+        console.log(
+          `[GeminiService.testConnection] Conexão realizada com sucesso usando o modelo '${targetModel}'.`
+        );
+        return { success: true, model: targetModel };
+      } catch (error: unknown) {
+        const errorMsg = getErrorMessage(error);
+        console.warn(
+          `[GeminiService.testConnection] Erro na tentativa ${attempt} com '${targetModel}': ${errorMsg}`
+        );
+
+        modelIndex = (modelIndex + 1) % modelsToTry.length;
+        const nextModel = modelsToTry[modelIndex];
+
+        console.log(
+          `[GeminiService.testConnection] Alternando para '${nextModel}' e retestando em 10 segundos...`
+        );
+        attempt++;
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+      }
+    }
   }
 
   async extrairDadosNfe(
@@ -62,37 +114,72 @@ export class GeminiService {
     customModel?: string
   ): Promise<NfeExtracao> {
     const client = this.createClient(customApiKey);
-    const targetModel = this.resolveModelName(customModel);
+    const modelsToTry = this.resolveModelRotationSequence(customModel);
 
-    const model = client.getGenerativeModel({
-      model: targetModel,
-      systemInstruction: NFE_EXTRACTION_SYSTEM_INSTRUCTION,
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: nfeResponseSchema,
-        temperature: 0.1,
-      },
-    });
+    let modelIndex = 0;
+    let attempt = 1;
 
-    const pdfPart = {
-      inlineData: {
-        data: uint8ArrayToBase64(pdfData),
-        mimeType: "application/pdf",
-      },
-    };
+    while (true) {
+      const targetModel = modelsToTry[modelIndex];
 
-    const result = await model.generateContent([
-      pdfPart,
-      NFE_EXTRACTION_USER_PROMPT,
-    ]);
+      try {
+        console.log(
+          `[GeminiService.extrairDadosNfe] Tentativa ${attempt}: enviando PDF usando o modelo '${targetModel}'...`
+        );
 
-    const responseText = result.response.text();
-    if (!responseText) {
-      throw new AppError("A API do Gemini retornou uma resposta vazia.", 502);
+        const model = client.getGenerativeModel({
+          model: targetModel,
+          systemInstruction: NFE_EXTRACTION_SYSTEM_INSTRUCTION,
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: nfeResponseSchema,
+            temperature: 0.1,
+          },
+        });
+
+        const pdfPart = {
+          inlineData: {
+            data: uint8ArrayToBase64(pdfData),
+            mimeType: "application/pdf",
+          },
+        };
+
+        const result = await model.generateContent([
+          pdfPart,
+          NFE_EXTRACTION_USER_PROMPT,
+        ]);
+
+        const responseText = result.response.text();
+        if (!responseText) {
+          throw new AppError("A API do Gemini retornou uma resposta vazia.", 502);
+        }
+
+        const parsedData = parseExtractionResponse(responseText);
+
+        console.log(
+          `[GeminiService.extrairDadosNfe] Sucesso no processamento da Nota Fiscal com o modelo '${targetModel}' (tentativa ${attempt}).`
+        );
+
+        return parsedData;
+      } catch (error: unknown) {
+        const errorMsg = getErrorMessage(error);
+        console.warn(
+          `[GeminiService.extrairDadosNfe] Erro na tentativa ${attempt} com o modelo '${targetModel}': ${errorMsg}`
+        );
+
+        modelIndex = (modelIndex + 1) % modelsToTry.length;
+        const nextModel = modelsToTry[modelIndex];
+
+        console.log(
+          `[GeminiService.extrairDadosNfe] Alternando para o próximo modelo '${nextModel}'. Aguardando 10 segundos para nova tentativa...`
+        );
+
+        attempt++;
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+      }
     }
-
-    return parseExtractionResponse(responseText);
   }
 }
 
 export const geminiService = new GeminiService();
+
