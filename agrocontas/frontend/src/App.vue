@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
+import ApiKeyModal from "./components/ApiKeyModal.vue";
 import FileUpload from "./components/FileUpload.vue";
 import FormattedViewer from "./components/FormattedViewer.vue";
 import JsonViewer from "./components/JsonViewer.vue";
-import SettingsTab from "./components/SettingsTab.vue";
 import {
   BlurText,
   ClickSpark,
@@ -15,8 +15,8 @@ import {
 import { extractNfe, getSettings, getServerConfig } from "./services/api";
 import { NfeExtracao } from "./types/nfe";
 
-const activeNavTab = ref<"extract" | "settings">("extract");
 const activeViewTab = ref<"formatted" | "json">("formatted");
+const isApiKeyModalOpen = ref(false);
 
 const selectedFile = ref<File | null>(null);
 const loading = ref(false);
@@ -60,8 +60,11 @@ async function handleExtract() {
   errorMessage.value = "";
 
   try {
-    const data = await extractNfe(selectedFile.value);
-    extractedData.value = data;
+    const result = await extractNfe(selectedFile.value);
+    extractedData.value = result.data;
+    if (result.model) {
+      activeModel.value = result.model;
+    }
     activeViewTab.value = "formatted";
   } catch (err: any) {
     errorMessage.value = err?.message || "Ocorreu um erro ao extrair os dados da nota fiscal.";
@@ -84,7 +87,7 @@ async function handleExtract() {
 
     <!-- Main Wrapper (Above Background) -->
     <div class="relative z-10">
-      <!-- Top Navigation & Brand (SEM STICKY - Rola naturalmente com a página) -->
+      <!-- Top Navigation & Brand -->
       <header class="border-b-2 border-outline bg-surface-bright/90 backdrop-blur-sm px-4 sm:px-8 py-3.5">
         <div class="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <!-- Logo & Platform Info -->
@@ -105,12 +108,12 @@ async function handleExtract() {
                 </span>
               </div>
               <p class="text-[11px] font-mono text-on-surface-variant mt-0.5">
-                Gestão Financeira Rural & Extração Fiscal (RF06 / RF07)
+                Gestão Financeira Rural & Extração Fiscal
               </p>
             </div>
           </div>
 
-          <!-- Status & Actions -->
+          <!-- Status & API Key Action -->
           <div class="flex items-center gap-3">
             <div class="flex items-center gap-2 px-2.5 py-1 bg-surface-container border border-outline text-[11px] font-mono text-on-surface">
               <span>IA:</span>
@@ -122,35 +125,21 @@ async function handleExtract() {
               ></span>
             </div>
 
-            <!-- Abas integradas limpas no topo (SEM STICKY) -->
-            <div class="inline-flex border-2 border-outline bg-surface p-0.5 shadow-[2px_2px_0px_#1a1a1a]">
+            <!-- Botão de Chave API (Abre Modal Pop-up) -->
+            <ClickSpark sparkColor="#1a1a1a">
               <button
-                class="px-3 py-1 text-xs font-headline font-bold uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
-                :class="activeNavTab === 'extract'
-                  ? 'bg-primary text-on-primary'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'"
-                @click="activeNavTab = 'extract'"
+                class="px-3.5 py-1.5 text-xs font-headline font-bold uppercase border-2 border-outline bg-surface hover:bg-surface-variant text-on-surface transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[2px_2px_0px_#1a1a1a]"
+                @click="isApiKeyModalOpen = true"
               >
-                <span class="material-symbols-outlined text-sm">document_scanner</span>
-                <span>Extração</span>
-              </button>
-
-              <button
-                class="px-3 py-1 text-xs font-headline font-bold uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
-                :class="activeNavTab === 'settings'
-                  ? 'bg-primary text-on-primary'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-variant'"
-                @click="activeNavTab = 'settings'"
-              >
-                <span class="material-symbols-outlined text-sm">tune</span>
-                <span>Configurações</span>
+                <span class="material-symbols-outlined text-sm">key</span>
+                <span>Chave API</span>
                 <span
                   v-if="!hasApiKey"
                   class="w-1.5 h-1.5 rounded-full bg-secondary"
-                  title="Configuração pendente"
+                  title="Configuração de chave pendente"
                 ></span>
               </button>
-            </div>
+            </ClickSpark>
           </div>
         </div>
       </header>
@@ -166,19 +155,16 @@ async function handleExtract() {
               </div>
               <h1 class="text-xl sm:text-2xl font-headline font-black uppercase tracking-tight text-on-surface">
                 <BlurText
-                  :text="activeNavTab === 'extract' ? 'Extração Automatizada de DANFE e NF-e' : 'Parâmetros e Conexão da API Gemini'"
+                  text="Extração Automatizada de DANFE e NF-e"
                   :delay="25"
                 />
               </h1>
               <p class="text-xs font-mono text-on-surface-variant mt-1">
-                {{ activeNavTab === 'extract'
-                  ? 'Envie o arquivo PDF para processamento semântico instantâneo e desdobramento financeiro.'
-                  : 'Gerencie sua chave de acesso do Google AI Studio e o endpoint do servidor local.'
-                }}
+                Envie o arquivo PDF para processamento semântico instantâneo e desdobramento financeiro.
               </p>
             </div>
 
-            <div v-if="activeNavTab === 'extract' && selectedFile" class="font-mono text-xs flex items-center gap-2 bg-surface-container px-3 py-1.5 border border-outline shadow-[2px_2px_0px_#1a1a1a] self-start sm:self-auto">
+            <div v-if="selectedFile" class="font-mono text-xs flex items-center gap-2 bg-surface-container px-3 py-1.5 border border-outline shadow-[2px_2px_0px_#1a1a1a] self-start sm:self-auto">
               <span class="text-on-surface-variant">Arquivo:</span>
               <strong class="text-on-surface truncate max-w-[200px]">{{ selectedFile.name }}</strong>
             </div>
@@ -186,7 +172,7 @@ async function handleExtract() {
         </FadeContent>
 
         <!-- View: Extração de NF-e -->
-        <div v-if="activeNavTab === 'extract'">
+        <div>
           <!-- Warning Banner (se chave ausente) -->
           <FadeContent v-if="!hasApiKey" :duration="350" direction="up">
             <div class="w-full bg-primary-container border-2 border-outline p-4 mb-6 shadow-[3px_3px_0px_#1a1a1a] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -197,17 +183,17 @@ async function handleExtract() {
                     Chave de API do Gemini não detectada
                   </div>
                   <div class="text-xs font-mono mt-0.5">
-                    Configure sua chave nas configurações para processar documentos com a IA.
+                    Configure sua chave de API para processar documentos com a inteligência artificial.
                   </div>
                 </div>
               </div>
               <ClickSpark sparkColor="#1a1a1a">
                 <button
                   class="bg-primary text-on-primary border-2 border-outline px-3.5 py-1.5 text-xs font-headline font-bold uppercase shadow-[2px_2px_0px_#1a1a1a] hover:bg-surface hover:text-on-surface transition-none flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
-                  @click="activeNavTab = 'settings'"
+                  @click="isApiKeyModalOpen = true"
                 >
                   <span class="material-symbols-outlined text-sm">key</span>
-                  Configurar
+                  Configurar Chave API
                 </button>
               </ClickSpark>
             </div>
@@ -228,7 +214,7 @@ async function handleExtract() {
             </div>
           </FadeContent>
 
-          <!-- Componente de Upload (RF06) -->
+          <!-- Componente de Upload -->
           <FileUpload
             :loading="loading"
             :selected-file="selectedFile"
@@ -254,7 +240,7 @@ async function handleExtract() {
             </div>
           </FadeContent>
 
-          <!-- Extracted Data Section (RF07) -->
+          <!-- Extracted Data Section -->
           <div v-if="extractedData && !loading" class="mt-8">
             <!-- Mode Switcher Sub-Bar -->
             <FadeContent :duration="350" direction="up">
@@ -272,7 +258,7 @@ async function handleExtract() {
                           : 'bg-surface hover:bg-surface-variant text-on-surface'"
                         @click="activeViewTab = 'formatted'"
                       >
-                        Formatada (RF07)
+                        Formatada
                       </button>
                     </ClickSpark>
 
@@ -310,11 +296,6 @@ async function handleExtract() {
           </div>
         </div>
 
-        <!-- View: Configurações -->
-        <div v-else-if="activeNavTab === 'settings'">
-          <SettingsTab @key-updated="checkKeyAvailability" />
-        </div>
-
         <!-- Clean Footer -->
         <FadeContent :duration="400" :delay="150" direction="up">
           <footer class="mt-12 pt-4 border-t-2 border-outline/30 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-on-surface-variant gap-2">
@@ -323,12 +304,17 @@ async function handleExtract() {
             </div>
             <div class="flex items-center gap-3">
               <span>IA: <strong>{{ activeModel }}</strong></span>
-              <span>•</span>
-              <span>RF01 ao RF07</span>
             </div>
           </footer>
         </FadeContent>
       </main>
     </div>
+
+    <!-- Modal Pop-up para Configuração da Chave de API do AI Studio -->
+    <ApiKeyModal
+      :is-open="isApiKeyModalOpen"
+      @close="isApiKeyModalOpen = false"
+      @key-updated="checkKeyAvailability"
+    />
   </div>
 </template>

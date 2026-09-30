@@ -71,7 +71,7 @@ function createGeminiHeaders(apiKey?: string, model?: string): Record<string, st
   return headers;
 }
 
-export async function extractNfe(file: File): Promise<NfeExtracao> {
+export async function extractNfe(file: File): Promise<{ data: NfeExtracao; model: string }> {
   const settings = getSettings();
   const formData = new FormData();
   formData.append("file", file);
@@ -90,7 +90,10 @@ export async function extractNfe(file: File): Promise<NfeExtracao> {
     throw new Error(data.error || "Falha ao extrair os dados da nota fiscal.");
   }
 
-  return data.data;
+  return {
+    data: data.data,
+    model: data.model || settings.geminiModel,
+  };
 }
 
 export async function testConfig(
