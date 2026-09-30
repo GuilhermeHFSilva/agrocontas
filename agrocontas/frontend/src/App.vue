@@ -23,21 +23,13 @@ const loading = ref(false);
 const errorMessage = ref("");
 const extractedData = ref<NfeExtracao | null>(null);
 const hasApiKey = ref(true);
-const activeModel = ref("gemini-3.6-flash");
+const activeModel = ref("gemini-3.5-flash-lite");
 
 onMounted(async () => {
   await checkKeyAvailability();
 });
 
 async function checkKeyAvailability() {
-  const settings = getSettings();
-  if (settings.geminiModel) {
-    activeModel.value = settings.geminiModel;
-  }
-  if (settings.geminiApiKey) {
-    hasApiKey.value = true;
-    return;
-  }
   try {
     const srv = await getServerConfig();
     hasApiKey.value = srv.hasServerKey;
@@ -46,6 +38,13 @@ async function checkKeyAvailability() {
     }
   } catch {
     hasApiKey.value = false;
+  }
+  const settings = getSettings();
+  if (settings.geminiModel && settings.geminiModel !== "gemini-3.5-flash-lite") {
+    activeModel.value = settings.geminiModel;
+  }
+  if (settings.geminiApiKey) {
+    hasApiKey.value = true;
   }
 }
 
