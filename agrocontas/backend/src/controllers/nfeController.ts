@@ -45,7 +45,7 @@ export class NfeController {
       const customApiKey = extractCustomApiKey(req);
       const customModel = extractCustomModel(req);
 
-      const dadosExtraidos = await geminiService.extrairDadosNfe(
+      const { dados, modelUsed } = await geminiService.extrairDadosNfe(
         req.file.buffer,
         customApiKey,
         customModel
@@ -54,7 +54,8 @@ export class NfeController {
       res.status(200).json({
         success: true,
         message: "Dados extraídos e classificados com sucesso.",
-        data: dadosExtraidos,
+        data: dados,
+        model: modelUsed,
       });
     } catch (error: unknown) {
       const statusCode = error instanceof AppError ? error.statusCode : 500;

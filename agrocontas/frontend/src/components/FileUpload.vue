@@ -80,7 +80,7 @@ function formatFileSize(bytes: number): string {
         <div>
           <div class="flex items-center gap-2">
             <span class="px-2 py-0.5 bg-primary-fixed border border-outline text-[10px] font-headline font-black uppercase text-on-primary-fixed">
-              <DecryptedText text="RF06 • INGESTÃO" :speed="35" />
+              <DecryptedText text="INGESTÃO DE DOCUMENTO" :speed="35" />
             </span>
             <h2 class="text-base sm:text-lg font-headline font-bold uppercase tracking-tight text-on-surface">
               Carregamento do Documento Fiscal (PDF)
@@ -176,7 +176,7 @@ function formatFileSize(bytes: number): string {
             >
               <span v-if="loading" class="brutal-spinner mr-1"></span>
               <span v-else class="material-symbols-outlined text-base">bolt</span>
-              <span>{{ loading ? "PROCESSANDO NOTA FISCAL COM IA..." : "EXTRAIR DADOS DA NOTA (RF07)" }}</span>
+              <span>{{ loading ? "PROCESSANDO NOTA FISCAL COM IA..." : "EXTRAIR DADOS DA NOTA FISCAL" }}</span>
             </button>
           </ClickSpark>
         </div>

@@ -117,7 +117,7 @@ export class GeminiService {
     pdfData: Uint8Array | ArrayBuffer,
     customApiKey?: string,
     customModel?: string
-  ): Promise<NfeExtracao> {
+  ): Promise<{ dados: NfeExtracao; modelUsed: string }> {
     const client = this.createClient(customApiKey);
     const modelsToTry = this.resolveModelRotationSequence(customModel);
 
@@ -165,7 +165,7 @@ export class GeminiService {
           `[GeminiService.extrairDadosNfe] Sucesso no processamento da Nota Fiscal com o modelo '${targetModel}' (tentativa ${attempt}).`
         );
 
-        return parsedData;
+        return { dados: parsedData, modelUsed: targetModel };
       } catch (error: unknown) {
         const errorMsg = getErrorMessage(error);
         console.warn(
