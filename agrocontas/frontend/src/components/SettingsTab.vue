@@ -14,7 +14,7 @@ const emit = defineEmits<{
 }>();
 
 const apiKey = ref("");
-const model = ref("gemini-3.6-flash");
+const model = ref("gemini-3.5-flash-lite");
 const apiUrl = ref("http://localhost:3000");
 const showKey = ref(false);
 
@@ -27,7 +27,7 @@ const serverHasKey = ref(false);
 onMounted(async () => {
   const current = getSettings();
   apiKey.value = current.geminiApiKey;
-  model.value = current.geminiModel || "gemini-3.6-flash";
+  model.value = current.geminiModel || "gemini-3.5-flash-lite";
   apiUrl.value = current.apiUrl || "http://localhost:3000";
 
   try {
@@ -44,7 +44,7 @@ async function handleSave() {
   try {
     saveSettings({
       geminiApiKey: apiKey.value.trim(),
-      geminiModel: model.value.trim() || "gemini-3.6-flash",
+      geminiModel: model.value.trim() || "gemini-3.5-flash-lite",
       apiUrl: apiUrl.value.trim() || "http://localhost:3000",
     });
     statusType.value = "success";
@@ -174,10 +174,10 @@ async function handleTest() {
             v-model="model"
             type="text"
             class="w-full bg-surface-bright border-2 border-outline p-2.5 font-mono text-xs text-on-surface focus:outline-none focus:bg-white focus:shadow-[3px_3px_0px_#1a1a1a] transition-all duration-150"
-            placeholder="gemini-3.6-flash"
+            placeholder="gemini-3.5-flash-lite"
           />
           <div class="text-[11px] font-mono text-on-surface-variant mt-1.5">
-            Padrão do projeto AgroContas: <strong>gemini-3.6-flash</strong> (alta velocidade com structured JSON outputs).
+            Padrão do projeto AgroContas: <strong>gemini-3.5-flash-lite</strong> (alta disponibilidade com structured JSON outputs).
           </div>
         </div>
 

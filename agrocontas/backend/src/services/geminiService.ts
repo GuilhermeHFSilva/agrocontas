@@ -16,6 +16,7 @@ export const DEFAULT_MODEL_ROTATION: string[] = [
 ];
 
 const DEFAULT_FALLBACK_MODEL = "gemini-3.5-flash-lite";
+const OBSOLETE_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-3.6-flash", "gemini-1.0-pro"];
 
 function sanitizeJsonMarkdown(rawResponseText: string): string {
   return rawResponseText
@@ -55,7 +56,11 @@ export class GeminiService {
   }
 
   private resolveModelRotationSequence(customModel?: string): string[] {
-    const baseModel = (customModel || env.GEMINI_MODEL || DEFAULT_FALLBACK_MODEL).trim();
+    let baseModel = (customModel || env.GEMINI_MODEL || DEFAULT_FALLBACK_MODEL).trim();
+
+    if (OBSOLETE_MODELS.includes(baseModel)) {
+      baseModel = DEFAULT_FALLBACK_MODEL;
+    }
 
     if (!DEFAULT_MODEL_ROTATION.includes(baseModel)) {
       return [baseModel, ...DEFAULT_MODEL_ROTATION];
