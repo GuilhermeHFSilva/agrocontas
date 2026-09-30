@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import {
+  ClickSpark,
+  DecryptedText,
+  FadeContent,
+  Magnet,
+  SpotlightCard,
+} from "./bits";
 import { NfeExtracao } from "../types/nfe";
 
 const props = defineProps<{
@@ -35,31 +42,53 @@ async function copyToClipboard() {
 </script>
 
 <template>
-  <div>
-    <div class="json-header">
-      <div class="json-header-title">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="16 18 22 12 16 6"></polyline>
-          <polyline points="8 6 2 12 8 18"></polyline>
-        </svg>
-        Dados em JSON
+  <FadeContent :duration="450" direction="up">
+    <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-5 shadow-[5px_5px_0px_#1a1a1a] mb-6">
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-outline mb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 bg-primary-fixed border border-outline text-[10px] font-headline font-black uppercase text-on-primary-fixed">
+              <DecryptedText text="SCHEMA JSON • RF07" :speed="35" />
+            </span>
+            <h3 class="text-sm font-headline font-bold uppercase tracking-tight text-on-surface flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-base">data_object</span>
+              Dados Estruturados em JSON Bruto
+            </h3>
+          </div>
+          <p class="text-xs font-mono text-on-surface-variant mt-0.5">
+            Payload tipado retornado pelo modelo Gemini para integração contábil
+          </p>
+        </div>
+
+        <ClickSpark sparkColor="#ffcc00" :sparkCount="8">
+          <Magnet :magnetStrength="2">
+            <button
+              class="border-2 border-outline px-3 py-1.5 text-xs font-headline font-bold uppercase transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[2px_2px_0px_#1a1a1a]"
+              :class="copied
+                ? 'bg-primary-fixed text-on-primary-fixed'
+                : 'bg-primary text-on-primary hover:bg-primary-container hover:text-on-primary-container'"
+              @click="copyToClipboard"
+            >
+              <span class="material-symbols-outlined text-sm">
+                {{ copied ? 'check' : 'content_copy' }}
+              </span>
+              <span>{{ copied ? "Copiado para Área de Transferência!" : "Copiar Payload JSON" }}</span>
+            </button>
+          </Magnet>
+        </ClickSpark>
       </div>
-      <button class="btn-copy" @click="copyToClipboard">
-        <svg v-if="!copied" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-        </svg>
-        <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-        {{ copied ? "Copiado!" : "Copiar JSON" }}
-      </button>
-    </div>
 
-    <pre class="json-wrapper"><code>{{ jsonFormatted }}</code></pre>
+      <!-- Terminal Code Box -->
+      <div class="border-2 border-outline bg-primary text-surface p-4 font-mono text-xs max-h-[520px] overflow-auto shadow-[4px_4px_0px_#1a1a1a] transition-all duration-200">
+        <pre class="leading-relaxed"><code>{{ jsonFormatted }}</code></pre>
+      </div>
 
-    <div class="json-footer">
-      Este JSON contém todos os dados extraídos da nota fiscal e pode ser usado para integração com outros sistemas.
-    </div>
-  </div>
+      <!-- Footer Note -->
+      <div class="mt-3 flex items-center justify-between text-[11px] font-mono text-on-surface-variant">
+        <span>Codificação: UTF-8 • Formato Canônico DOO UniRV</span>
+        <span class="font-bold">STATUS: VÁLIDO</span>
+      </div>
+    </SpotlightCard>
+  </FadeContent>
 </template>
