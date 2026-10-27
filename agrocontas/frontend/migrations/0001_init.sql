@@ -62,4 +62,21 @@ CREATE TABLE IF NOT EXISTS movimento_financeiro (
   status               TEXT NOT NULL DEFAULT 'CONFIRMADO' CHECK (status IN ('CONFIRMADO', 'ESTORNADO'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_contas_fornecedor_documento ON movimento_contas (id_fornecedor, numero_documento);
+CREATE INDEX IF NOT EXISTS idx_contas_fornecedor_doc ON movimento_contas (id_fornecedor, numero_documento);
+CREATE INDEX IF NOT EXISTS idx_parcelas_conta ON movimento_parcelas (id_movimento_conta);
+CREATE INDEX IF NOT EXISTS idx_mov_parcela ON movimento_financeiro (id_movimento_parcela);
+
+-- Carga inicial de categorias agropecuárias (UniRV)
+INSERT OR IGNORE INTO despesas_receitas (descricao, tipo, grupo_operacional, centro_custo, status) VALUES
+  ('INSUMOS AGRÍCOLAS', 'DESPESA', 'Lavouras e Culturas', 'Produção Rural', 'ATIVO'),
+  ('MANUTENÇÃO E OPERAÇÃO', 'DESPESA', 'Máquinas e Equipamentos', 'Oficina e Campo', 'ATIVO'),
+  ('RECURSOS HUMANOS', 'DESPESA', 'Pessoal e Folha', 'Mão de Obra', 'ATIVO'),
+  ('SERVIÇOS OPERACIONAIS', 'DESPESA', 'Logística e Fretes', 'Operação Agrícola', 'ATIVO'),
+  ('INFRAESTRUTURA E UTILIDADES', 'DESPESA', 'Instalações e Terra', 'Propriedade Rural', 'ATIVO'),
+  ('ADMINISTRATIVAS', 'DESPESA', 'Gestão e Honorários', 'Administração', 'ATIVO'),
+  ('SEGUROS E PROTEÇÃO', 'DESPESA', 'Gestão de Riscos', 'Seguridade', 'ATIVO'),
+  ('IMPOSTOS E TAXAS', 'DESPESA', 'Tributos Rurais', 'Fiscal', 'ATIVO'),
+  ('INVESTIMENTOS', 'DESPESA', 'Bens de Capital', 'Patrimônio', 'ATIVO'),
+  ('VENDA DA SAFRA', 'RECEITA', 'Comercialização de Grãos', 'Receitas Agrícolas', 'ATIVO'),
+  ('PRESTAÇÃO DE SERVIÇOS AGRÍCOLAS', 'RECEITA', 'Locação de Máquinas e Serviços', 'Receitas Operacionais', 'ATIVO'),
+  ('ARRENDAMENTO RECEBIDO', 'RECEITA', 'Rendas Imobiliárias', 'Receitas Patrimoniais', 'ATIVO');

@@ -4,6 +4,7 @@ import { DatabaseSync, SQLInputValue } from "node:sqlite";
 import { env } from "../config/env";
 import { Db, SqlParam, SqlStatement } from "./types";
 import { SCHEMA_SQL } from "./schema";
+import { createCloudflareD1Db } from "./d1HttpAdapter";
 
 let instance: Db | null = null;
 
@@ -36,6 +37,13 @@ function createSqliteDb(database: DatabaseSync): Db {
 export function getDb(): Db {
   if (instance) return instance;
 
+  if (env.CF_ACCOUNT_ID && env.CF_DATABASE_ID && env.CF_API_TOKEN) {
+    console.log(`[DB] Conectando ao Cloudflare D1 (${env.CF_DATABASE_ID})...`);
+    instance = createCloudflareD1Db(env.CF_ACCOUNT_ID, env.CF_DATABASE_ID, env.CF_API_TOKEN);
+    return instance;
+  }
+
+  console.log(`[DB] Conectando ao SQLite local em ${env.DATABASE_PATH}...`);
   const filePath = path.resolve(env.DATABASE_PATH);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
 
