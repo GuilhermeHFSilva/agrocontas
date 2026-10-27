@@ -1,4 +1,6 @@
 import { Db, SqlParam, SqlStatement } from "../db/types";
+import { ServiceError } from "../utils/serviceError";
+import { arredondar, dataValida, formatarCpfCnpj } from "../utils/validacao";
 import { NfeExtracao } from "../../src/types/nfe";
 import {
   CadastroLancado,
@@ -9,16 +11,6 @@ import {
 } from "../../src/types/conta";
 
 // Mantenha este arquivo idêntico a backend/src/services/contaService.ts.
-
-export class ContaError extends Error {
-  public readonly statusCode: number;
-
-  constructor(message: string, statusCode = 400) {
-    super(message);
-    this.name = "ContaError";
-    this.statusCode = statusCode;
-  }
-}
 
 interface PessoaRow {
   id_pessoa: number;
@@ -48,53 +40,23 @@ interface PessoaNormalizada {
   tipoPessoa: "FISICA" | "JURIDICA";
 }
 
-const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
-
-function arredondar(valor: number): number {
-  return Math.round(valor * 100) / 100;
-}
-
-// Padroniza CPF/CNPJ para a forma mascarada, garantindo que "11111111000100" e
-// "11.111.111/0001-00" sejam reconhecidos como o mesmo cadastro (coluna cpf_cnpj é UNIQUE).
 function normalizarPessoa(nome: string, cpfCnpj: string, nomeFantasia?: string | null): PessoaNormalizada {
   const razao = (nome ?? "").trim().replace(/\s+/g, " ").toUpperCase();
   if (!razao) {
-    throw new ContaError("Nome/Razão Social não informado para um dos participantes da nota.");
+    throw new ServiceError("Nome/Razão Social não informado para um dos participantes da nota.");
   }
 
-  const digitos = (cpfCnpj ?? "").replace(/\D/g, "");
-  if (digitos.length === 11) {
-    return {
-      nome: razao,
-      nomeFantasia: null,
-      cpfCnpj: digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4"),
-      tipoPessoa: "FISICA",
-    };
-  }
-  if (digitos.length === 14) {
-    const fantasia = (nomeFantasia ?? "").trim().toUpperCase();
-    return {
-      nome: razao,
-      nomeFantasia: fantasia || null,
-      cpfCnpj: digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5"),
-      tipoPessoa: "JURIDICA",
-    };
-  }
-  throw new ContaError(`CPF/CNPJ inválido para "${razao}": informe 11 (CPF) ou 14 (CNPJ) dígitos.`);
+  const { cpfCnpj: documento, tipoPessoa } = formatarCpfCnpj(cpfCnpj, `CPF/CNPJ de "${razao}"`);
+  const fantasia = tipoPessoa === "JURIDICA" ? (nomeFantasia ?? "").trim().toUpperCase() : "";
+  return { nome: razao, nomeFantasia: fantasia || null, cpfCnpj: documento, tipoPessoa };
 }
 
 function normalizarDescricaoDespesa(descricao: string): string {
   const normalizada = (descricao ?? "").trim().replace(/\s+/g, " ").toUpperCase().slice(0, 80);
   if (!normalizada) {
-    throw new ContaError("A classificação da despesa não foi informada.");
+    throw new ServiceError("A classificação da despesa não foi informada.");
   }
   return normalizada;
-}
-
-function dataValida(valor: string): boolean {
-  if (!DATA_ISO.test(valor ?? "")) return false;
-  const data = new Date(`${valor}T00:00:00Z`);
-  return !Number.isNaN(data.getTime()) && data.toISOString().startsWith(valor);
 }
 
 function montarParcelas(nfe: NfeExtracao): ParcelaLancamento[] {
@@ -109,14 +71,14 @@ function montarParcelas(nfe: NfeExtracao): ParcelaLancamento[] {
   const numeros = new Set<number>();
   for (const parcela of parcelas) {
     if (!Number.isInteger(parcela.numero) || parcela.numero < 1 || numeros.has(parcela.numero)) {
-      throw new ContaError("Numeração de parcelas inválida ou repetida.");
+      throw new ServiceError("Numeração de parcelas inválida ou repetida.");
     }
     numeros.add(parcela.numero);
     if (!dataValida(parcela.dataVencimento)) {
-      throw new ContaError(`Data de vencimento inválida na parcela ${parcela.numero} (esperado AAAA-MM-DD).`);
+      throw new ServiceError(`Data de vencimento inválida na parcela ${parcela.numero} (esperado AAAA-MM-DD).`);
     }
     if (!Number.isFinite(parcela.valor) || parcela.valor <= 0) {
-      throw new ContaError(`Valor inválido na parcela ${parcela.numero}.`);
+      throw new ServiceError(`Valor inválido na parcela ${parcela.numero}.`);
     }
   }
   return parcelas;
@@ -124,23 +86,23 @@ function montarParcelas(nfe: NfeExtracao): ParcelaLancamento[] {
 
 function validarNfe(nfe: NfeExtracao): void {
   if (!nfe || typeof nfe !== "object" || !nfe.fornecedor || !nfe.faturado) {
-    throw new ContaError("Dados da nota fiscal ausentes ou incompletos.");
+    throw new ServiceError("Dados da nota fiscal ausentes ou incompletos.");
   }
 }
 
 function validarConta(nfe: NfeExtracao): string {
   const numeroDocumento = (nfe.numeroNotaFiscal ?? "").trim();
   if (!numeroDocumento || numeroDocumento.length > 44) {
-    throw new ContaError("Número do documento ausente ou maior que 44 caracteres.");
+    throw new ServiceError("Número do documento ausente ou maior que 44 caracteres.");
   }
   if (!dataValida(nfe.dataEmissao)) {
-    throw new ContaError("Data de emissão inválida (esperado AAAA-MM-DD).");
+    throw new ServiceError("Data de emissão inválida (esperado AAAA-MM-DD).");
   }
   if (!dataValida(nfe.dataVencimento)) {
-    throw new ContaError("Data de vencimento inválida (esperado AAAA-MM-DD).");
+    throw new ServiceError("Data de vencimento inválida (esperado AAAA-MM-DD).");
   }
   if (!Number.isFinite(nfe.valorTotal) || nfe.valorTotal <= 0) {
-    throw new ContaError("Valor total inválido.");
+    throw new ServiceError("Valor total inválido.");
   }
   return numeroDocumento;
 }
@@ -235,7 +197,7 @@ export async function lancarNfe(db: Db, nfe: NfeExtracao): Promise<LancamentoNfe
 
   const antes = await verificarNfe(db, nfe);
   if (antes.contaExistente) {
-    throw new ContaError(
+    throw new ServiceError(
       `A nota ${numeroDocumento} deste fornecedor já foi lançada (conta ID ${antes.contaExistente.id}).`,
       409
     );
@@ -302,7 +264,7 @@ export async function lancarNfe(db: Db, nfe: NfeExtracao): Promise<LancamentoNfe
     await db.batch(comandos);
   } catch (error) {
     const detalhe = error instanceof Error ? error.message : String(error);
-    throw new ContaError(`Não foi possível gravar o lançamento: ${detalhe}`, 500);
+    throw new ServiceError(`Não foi possível gravar o lançamento: ${detalhe}`, 500);
   }
 
   const [fornecedorRow, faturadoRow, despesaRow] = await Promise.all([
@@ -313,7 +275,7 @@ export async function lancarNfe(db: Db, nfe: NfeExtracao): Promise<LancamentoNfe
   const conta = fornecedorRow ? await buscarContaExistente(db, fornecedorRow.id_pessoa, numeroDocumento) : null;
 
   if (!fornecedorRow || !faturadoRow || !despesaRow || !conta) {
-    throw new ContaError("Lançamento gravado, mas não foi possível reler os registros criados.", 500);
+    throw new ServiceError("Lançamento gravado, mas não foi possível reler os registros criados.", 500);
   }
 
   const parcelasGravadas = await db.all<ParcelaRow>(
