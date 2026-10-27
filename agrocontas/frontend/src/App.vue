@@ -4,6 +4,7 @@ import ApiKeyModal from "./components/ApiKeyModal.vue";
 import FileUpload from "./components/FileUpload.vue";
 import FormattedViewer from "./components/FormattedViewer.vue";
 import JsonViewer from "./components/JsonViewer.vue";
+import UltimaAtualizacaoGithub from "./components/UltimaAtualizacaoGithub.vue";
 import VerificacaoBanco from "./components/VerificacaoBanco.vue";
 import ClassificacoesView from "./views/ClassificacoesView.vue";
 import ContasView from "./views/ContasView.vue";
@@ -398,7 +399,8 @@ async function handleLancar() {
             <div>
               AgroContas • Gestão Financeira Rural • UniRV
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-col items-center sm:items-end gap-3">
+              <UltimaAtualizacaoGithub />
               <span>IA: <strong>{{ activeModel }}</strong></span>
             </div>
           </footer>
