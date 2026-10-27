@@ -3,18 +3,21 @@ import cors from "cors";
 import multer from "multer";
 import { env } from "./config/env";
 import { nfeRoutes } from "./routes/nfeRoutes";
+import { contaRoutes } from "./routes/contaRoutes";
+import { pessoaRoutes } from "./routes/pessoaRoutes";
+import { classificacaoRoutes } from "./routes/classificacaoRoutes";
 
 const app = express();
 
 app.use(
   cors({
     origin: env.CORS_ORIGIN === "*" ? true : env.CORS_ORIGIN,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "x-gemini-api-key", "x-gemini-model"],
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/api/health", (_req: Request, res: Response) => {
@@ -28,6 +31,9 @@ app.get("/api/health", (_req: Request, res: Response) => {
 });
 
 app.use("/api/nfe", nfeRoutes);
+app.use("/api/contas", contaRoutes);
+app.use("/api/pessoas", pessoaRoutes);
+app.use("/api/classificacoes", classificacaoRoutes);
 
 app.use(
   (err: Error, _req: Request, res: Response, _next: NextFunction): void => {

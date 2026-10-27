@@ -140,3 +140,143 @@ button:active:not(:disabled) {
   transform: translate(2px, 2px);
   box-shadow: none !important;
 }
+
+/* Telas "Manter": campos, botões e tabelas compartilhados (padrão neo-brutalista) */
+.ac-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ac-input {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 2px solid var(--outline);
+  background: var(--surface-bright);
+  color: var(--on-surface);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.75rem;
+}
+
+.ac-input:focus {
+  outline: none;
+  background: #ffffff;
+  box-shadow: 3px 3px 0px #1a1a1a;
+}
+
+.ac-input:disabled {
+  background: var(--surface-container-high);
+  color: var(--text-muted);
+}
+
+.ac-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4rem 0.8rem;
+  border: 2px solid var(--outline);
+  background: var(--surface);
+  box-shadow: 2px 2px 0px #1a1a1a;
+  color: var(--on-surface);
+  cursor: pointer;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ac-btn:hover:not(:disabled) {
+  background: var(--surface-variant);
+}
+
+.ac-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ac-btn-primary {
+  background: var(--primary-container);
+}
+
+.ac-btn-primary:hover:not(:disabled) {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.ac-btn-dark {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.ac-btn-dark:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--on-surface);
+}
+
+.ac-btn-danger {
+  border-color: var(--secondary);
+  background: var(--secondary-container);
+  box-shadow: 2px 2px 0px #e63b2e;
+}
+
+.ac-btn-danger:hover:not(:disabled) {
+  background: var(--secondary);
+  color: var(--on-secondary);
+}
+
+.ac-btn-sm {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.65rem;
+}
+
+.ac-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.75rem;
+}
+
+.ac-table th {
+  padding: 0.5rem 0.625rem;
+  border-bottom: 2px solid var(--outline);
+  background: var(--surface-container-high);
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ac-table th.ac-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.ac-table th.ac-sortable:hover {
+  background: var(--primary-container);
+}
+
+.ac-table td {
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--outline-variant);
+  vertical-align: middle;
+}
+
+.ac-table tbody tr:hover {
+  background: var(--surface-container-low);
+}
+
+.ac-row-inativo td {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.ac-row-inativo td:last-child {
+  text-decoration: none;
+}
