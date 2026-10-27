@@ -137,7 +137,7 @@ export async function listarContas(db: Db, filtros: ContaFiltros = {}): Promise<
 
   if (filtros.status === "ATIVAS") {
     condicoes.push("c.status <> 'CANCELADA'");
-  } else if (filtros.status) {
+  } else if (filtros.status && filtros.status !== "TODAS") {
     condicoes.push("c.status = ?");
     params.push(opcaoValida(filtros.status, STATUS_CONTA, "Status"));
   }

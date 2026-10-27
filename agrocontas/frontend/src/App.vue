@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import ApiKeyModal from "./components/ApiKeyModal.vue";
 import FileUpload from "./components/FileUpload.vue";
 import FormattedViewer from "./components/FormattedViewer.vue";
 import JsonViewer from "./components/JsonViewer.vue";
 import VerificacaoBanco from "./components/VerificacaoBanco.vue";
+import ClassificacoesView from "./views/ClassificacoesView.vue";
+import ContasView from "./views/ContasView.vue";
+import PessoasView from "./views/PessoasView.vue";
 import {
   BlurText,
   ClickSpark,
@@ -16,6 +19,31 @@ import {
 import { extractNfe, getSettings, getServerConfig, lancarNfe, verificarNfe } from "./services/api";
 import { NfeExtracao } from "./types/nfe";
 import { LancamentoNfe, VerificacaoNfe } from "./types/conta";
+
+type AppView = "extracao" | "contas" | "pessoas" | "classificacoes";
+
+const NAV_ITEMS: { id: AppView; label: string; icon: string }[] = [
+  { id: "extracao", label: "Extração de NF-e", icon: "upload_file" },
+  { id: "contas", label: "Contas", icon: "receipt_long" },
+  { id: "pessoas", label: "Pessoas", icon: "groups" },
+  { id: "classificacoes", label: "Classificação", icon: "category" },
+];
+
+function viewFromHash(): AppView {
+  const hash = window.location.hash.replace("#", "");
+  return NAV_ITEMS.some((item) => item.id === hash) ? (hash as AppView) : "extracao";
+}
+
+const currentView = ref<AppView>(viewFromHash());
+
+function navigate(view: AppView) {
+  currentView.value = view;
+  window.location.hash = view;
+}
+
+function syncViewFromHash() {
+  currentView.value = viewFromHash();
+}
 
 const activeViewTab = ref<"formatted" | "json">("formatted");
 const isApiKeyModalOpen = ref(false);
@@ -31,7 +59,12 @@ const hasApiKey = ref(true);
 const activeModel = ref("gemini-3.5-flash-lite");
 
 onMounted(async () => {
+  window.addEventListener("hashchange", syncViewFromHash);
   await checkKeyAvailability();
+});
+
+onUnmounted(() => {
+  window.removeEventListener("hashchange", syncViewFromHash);
 });
 
 async function checkKeyAvailability() {
@@ -114,7 +147,7 @@ async function handleLancar() {
     <div class="relative z-10">
       <!-- Top Navigation & Brand -->
       <header class="border-b-2 border-outline bg-surface-bright/90 backdrop-blur-sm px-4 sm:px-8 py-3.5">
-        <div class="max-w-5xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <!-- Logo & Platform Info -->
           <div class="flex items-center gap-3">
             <Magnet :magnetStrength="3" :padding="20">
@@ -170,7 +203,33 @@ async function handleLancar() {
       </header>
 
       <!-- Main Content Container -->
-      <main class="max-w-5xl mx-auto px-4 sm:px-8 py-8">
+      <!-- Navegação entre os módulos -->
+      <nav class="border-b-2 border-outline bg-surface-container px-4 sm:px-8" aria-label="Módulos">
+        <div class="max-w-6xl mx-auto flex flex-wrap gap-1.5 py-2">
+          <button
+            v-for="item in NAV_ITEMS"
+            :key="item.id"
+            type="button"
+            class="px-3 py-1.5 text-xs font-headline font-bold uppercase border-2 border-outline flex items-center gap-1.5 cursor-pointer"
+            :class="currentView === item.id
+              ? 'bg-primary-container text-on-primary-container shadow-[2px_2px_0px_#1a1a1a]'
+              : 'bg-surface hover:bg-surface-variant text-on-surface'"
+            :aria-current="currentView === item.id ? 'page' : undefined"
+            @click="navigate(item.id)"
+          >
+            <span class="material-symbols-outlined text-sm">{{ item.icon }}</span>
+            {{ item.label }}
+          </button>
+        </div>
+      </nav>
+
+      <main class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+        <ContasView v-if="currentView === 'contas'" />
+        <PessoasView v-else-if="currentView === 'pessoas'" />
+        <ClassificacoesView v-else-if="currentView === 'classificacoes'" />
+
+        <!-- Extração de NF-e (v-show mantém o resultado ao navegar entre os módulos) -->
+        <div v-show="currentView === 'extracao'">
         <!-- Clean Hero Section -->
         <FadeContent :duration="400" direction="up">
           <div class="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b-2 border-outline/30">
@@ -329,6 +388,8 @@ async function handleLancar() {
               :data="extractedData"
             />
           </div>
+        </div>
+
         </div>
 
         <!-- Clean Footer -->

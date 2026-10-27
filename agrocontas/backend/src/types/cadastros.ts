@@ -108,8 +108,9 @@ export interface ContaInput {
 export interface ContaFiltros {
   q?: string;
   tipoOperacao?: TipoOperacao | "";
-  // "ATIVAS" traz tudo que não está CANCELADA (equivalente ao ATIVO dos demais cadastros); "" traz todas.
-  status?: StatusConta | "ATIVAS" | "";
+  // "ATIVAS" traz tudo que não está CANCELADA (equivalente ao ATIVO dos demais cadastros);
+  // "TODAS" (ou "") traz também as canceladas.
+  status?: StatusConta | "ATIVAS" | "TODAS" | "";
   vencimentoDe?: string;
   vencimentoAte?: string;
 }
