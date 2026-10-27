@@ -173,10 +173,7 @@ async function handleLancar() {
           </div>
 
           <!-- Status & API Key Action -->
-          <div class="flex flex-col items-start sm:items-end gap-2.5">
-            <UltimaAtualizacaoGithub />
-
-            <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-3">
             <div class="flex items-center gap-2 px-2.5 py-1 bg-surface-container border border-outline text-[11px] font-mono text-on-surface">
               <span>IA:</span>
               <span class="font-bold">{{ activeModel }}</span>
@@ -202,7 +199,6 @@ async function handleLancar() {
                 ></span>
               </button>
             </ClickSpark>
-            </div>
           </div>
         </div>
       </header>
@@ -403,7 +399,8 @@ async function handleLancar() {
             <div>
               AgroContas • Gestão Financeira Rural • UniRV
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-col items-center sm:items-end gap-3">
+              <UltimaAtualizacaoGithub />
               <span>IA: <strong>{{ activeModel }}</strong></span>
             </div>
           </footer>
