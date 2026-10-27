@@ -4,6 +4,7 @@ import ApiKeyModal from "./components/ApiKeyModal.vue";
 import FileUpload from "./components/FileUpload.vue";
 import FormattedViewer from "./components/FormattedViewer.vue";
 import JsonViewer from "./components/JsonViewer.vue";
+import UltimaAtualizacaoGithub from "./components/UltimaAtualizacaoGithub.vue";
 import VerificacaoBanco from "./components/VerificacaoBanco.vue";
 import ClassificacoesView from "./views/ClassificacoesView.vue";
 import ContasView from "./views/ContasView.vue";
@@ -172,7 +173,9 @@ async function handleLancar() {
           </div>
 
           <!-- Status & API Key Action -->
-          <div class="flex items-center gap-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <UltimaAtualizacaoGithub />
+
             <div class="flex items-center gap-2 px-2.5 py-1 bg-surface-container border border-outline text-[11px] font-mono text-on-surface">
               <span>IA:</span>
               <span class="font-bold">{{ activeModel }}</span>
