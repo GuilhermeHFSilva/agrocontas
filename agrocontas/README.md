@@ -1,10 +1,26 @@
-# AgroContas - Extração e Classificação de Notas Fiscais (1ª Etapa)
+# AgroContas - Extração, Análise e Lançamento de Notas Fiscais (1ª e 2ª Etapas)
 
 Sistema de extração de dados cadastrais, financeiros e classificação inteligente de despesas do agronegócio a partir de Notas Fiscais em PDF (Contas a Pagar), utilizando o modelo `gemini-3.6-flash` do Google Gemini (Google AI Studio).
 
 Suporta execução híbrida:
 - **Local / Tradicional**: Servidor Node.js (Express) + Frontend Vite.
 - **Serverless / Edge (Cloudflare Pages)**: Executável como Service Worker / Pages Functions nativas com zero custos de infraestrutura.
+
+## 2ª Etapa: Análise no Banco e Lançamento
+
+Após a extração, o sistema consulta o banco de dados e informa na tela se o **Fornecedor** (CNPJ), o **Faturado** (CPF/CNPJ) e a **Despesa** (classificação) existem (`EXISTE – ID: n` / `NÃO EXISTE`). Ao clicar em **Confirmar e Lançar**, em uma única transação, o sistema cria o que não existe, registra o movimento (`movimento_contas`, tipo `PAGAR`) e suas parcelas (`movimento_parcelas`) e informa o sucesso.
+
+- `POST /api/contas/verificar`: consulta (não altera dados).
+- `POST /api/contas/lancar`: grava o lançamento. Retorna `409` se a mesma nota já foi lançada para o fornecedor.
+- Cadastros nunca são excluídos: encontrados como `INATIVO` são reativados no lançamento.
+- Fornecedor é gravado como `FORNECEDOR` e o Faturado como `CLIENTE` (quem já tem o outro papel vira `AMBOS`).
+
+### Banco de dados
+
+- **Cloudflare Pages**: banco **D1**. Crie com `npx wrangler d1 create agrocontas`, copie o `database_id` para `frontend/wrangler.toml` e aplique o schema com `npm run db:migrate:remote` (local: `npm run db:migrate:local`, antes do `pages:dev`).
+- **Node.js (Express)**: SQLite via `node:sqlite` (Node 22.5+), arquivo definido por `DATABASE_PATH` (padrão `backend/data/agrocontas.db`), com schema criado automaticamente.
+
+O schema segue o DER oficial (5 tabelas) em `frontend/migrations/0001_init.sql` (espelhado em `backend/src/db/schema.ts`).
 
 ## Arquitetura do Projeto
 

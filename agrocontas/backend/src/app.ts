@@ -3,6 +3,7 @@ import cors from "cors";
 import multer from "multer";
 import { env } from "./config/env";
 import { nfeRoutes } from "./routes/nfeRoutes";
+import { contaRoutes } from "./routes/contaRoutes";
 
 const app = express();
 
@@ -14,7 +15,7 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/api/health", (_req: Request, res: Response) => {
@@ -28,6 +29,7 @@ app.get("/api/health", (_req: Request, res: Response) => {
 });
 
 app.use("/api/nfe", nfeRoutes);
+app.use("/api/contas", contaRoutes);
 
 app.use(
   (err: Error, _req: Request, res: Response, _next: NextFunction): void => {

@@ -1,4 +1,5 @@
 import { ApiResponse, AppSettings, NfeExtracao } from "../types/nfe";
+import { LancamentoNfe, VerificacaoNfe } from "../types/conta";
 
 const STORAGE_KEY = "agrocontas_settings";
 const DEFAULT_MODEL = "gemini-3.5-flash-lite";
@@ -134,4 +135,31 @@ export async function getServerConfig(): Promise<{ hasServerKey: boolean; defaul
   } catch {
     return { hasServerKey: false, defaultModel: DEFAULT_MODEL };
   }
+}
+
+async function postNfe<T>(path: string, nfe: NfeExtracao, fallbackError: string): Promise<T> {
+  const settings = getSettings();
+  const endpoint = buildEndpoint(settings.apiUrl, path);
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(nfe),
+  });
+
+  const data: ApiResponse<T> = await response.json();
+  if (!response.ok || !data.success || !data.data) {
+    throw new Error(data.error || fallbackError);
+  }
+  return data.data;
+}
+
+// Consulta no banco se Fornecedor, Faturado e Despesa da nota já existem.
+export function verificarNfe(nfe: NfeExtracao): Promise<VerificacaoNfe> {
+  return postNfe<VerificacaoNfe>("/api/contas/verificar", nfe, "Falha ao consultar o banco de dados.");
+}
+
+// Cria os cadastros ausentes, o movimento de contas a pagar e suas parcelas.
+export function lancarNfe(nfe: NfeExtracao): Promise<LancamentoNfe> {
+  return postNfe<LancamentoNfe>("/api/contas/lancar", nfe, "Falha ao lançar o registro.");
 }

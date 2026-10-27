@@ -4,6 +4,7 @@ import ApiKeyModal from "./components/ApiKeyModal.vue";
 import FileUpload from "./components/FileUpload.vue";
 import FormattedViewer from "./components/FormattedViewer.vue";
 import JsonViewer from "./components/JsonViewer.vue";
+import VerificacaoBanco from "./components/VerificacaoBanco.vue";
 import {
   BlurText,
   ClickSpark,
@@ -12,8 +13,9 @@ import {
   Magnet,
   Squares,
 } from "./components/bits";
-import { extractNfe, getSettings, getServerConfig } from "./services/api";
+import { extractNfe, getSettings, getServerConfig, lancarNfe, verificarNfe } from "./services/api";
 import { NfeExtracao } from "./types/nfe";
+import { LancamentoNfe, VerificacaoNfe } from "./types/conta";
 
 const activeViewTab = ref<"formatted" | "json">("formatted");
 const isApiKeyModalOpen = ref(false);
@@ -22,6 +24,9 @@ const selectedFile = ref<File | null>(null);
 const loading = ref(false);
 const errorMessage = ref("");
 const extractedData = ref<NfeExtracao | null>(null);
+const verificacao = ref<VerificacaoNfe | null>(null);
+const lancamento = ref<LancamentoNfe | null>(null);
+const saving = ref(false);
 const hasApiKey = ref(true);
 const activeModel = ref("gemini-3.5-flash-lite");
 
@@ -58,10 +63,14 @@ async function handleExtract() {
 
   loading.value = true;
   errorMessage.value = "";
+  verificacao.value = null;
+  lancamento.value = null;
 
   try {
     const result = await extractNfe(selectedFile.value);
     extractedData.value = result.data;
+    // 2ª etapa: após a extração, analisa no banco se Fornecedor, Faturado e Despesa já existem.
+    verificacao.value = await verificarNfe(result.data);
     if (result.model) {
       activeModel.value = result.model;
     }
@@ -71,6 +80,22 @@ async function handleExtract() {
     await checkKeyAvailability();
   } finally {
     loading.value = false;
+  }
+}
+
+async function handleLancar() {
+  if (!extractedData.value) return;
+
+  saving.value = true;
+  errorMessage.value = "";
+
+  try {
+    lancamento.value = await lancarNfe(extractedData.value);
+    verificacao.value = await verificarNfe(extractedData.value);
+  } catch (err: any) {
+    errorMessage.value = err?.message || "Ocorreu um erro ao lançar o registro.";
+  } finally {
+    saving.value = false;
   }
 }
 </script>
@@ -281,6 +306,16 @@ async function handleExtract() {
                   <span>Nota Fiscal #<strong>{{ extractedData.numeroNotaFiscal || 'N/A' }}</strong></span>
                 </div>
               </div>
+            </FadeContent>
+
+            <!-- Análise no banco de dados (2ª etapa) -->
+            <FadeContent v-if="verificacao" :duration="350" direction="up">
+              <VerificacaoBanco
+                :verificacao="verificacao"
+                :lancamento="lancamento"
+                :saving="saving"
+                @lancar="handleLancar"
+              />
             </FadeContent>
 
             <!-- Viewers -->

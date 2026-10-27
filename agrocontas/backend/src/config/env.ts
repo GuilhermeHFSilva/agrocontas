@@ -8,4 +8,5 @@ export const env = {
   CORS_ORIGIN: process.env.CORS_ORIGIN || "*",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
   GEMINI_MODEL: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
+  DATABASE_PATH: process.env.DATABASE_PATH || path.resolve(__dirname, "../../data/agrocontas.db"),
 };

@@ -5,3 +5,10 @@ pages_build_output_dir = "dist"
 
 [vars]
 GEMINI_MODEL = "gemini-3.5-flash-lite"
+
+# Banco de dados D1 (SQLite na borda). Troque o database_id pelo ID real gerado em `npx wrangler d1 create agrocontas`.
+[[d1_databases]]
+binding = "DB"
+database_name = "agrocontas"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
