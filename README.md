@@ -2,7 +2,7 @@
 
 Sistema administrativo-financeiro para produtores rurais familiares e gestores do agronegócio. Integra o controle tradicional de contas a pagar e a receber a um motor de **extração inteligente de Notas Fiscais Eletrônicas (NF-e/DANFE em PDF)** com o **Google Gemini**, que lê o documento, classifica a despesa, confere o cadastro no banco e lança a conta com suas parcelas.
 
-> Projeto da disciplina de **Desenvolvimento Orientado a Objetos (DOO)** da **Universidade de Rio Verde (UniRV)**, desenvolvido pela Equipe de Desenvolvimento AgroContas.
+> Projeto da disciplina **ESW424 — Prática de Engenharia de Software** (turma **SOFT6 - 238 - A**) da **Universidade de Rio Verde (UniRV)**, desenvolvido pela Equipe de Desenvolvimento AgroContas.
 
 ## Sumário
 
@@ -26,6 +26,7 @@ Sistema administrativo-financeiro para produtores rurais familiares e gestores d
 - **Conferência no banco**: após a extração, o sistema verifica se Fornecedor, Faturado e Despesa já existem e permite lançar o registro com um clique.
 - **Cadastros no padrão "Manter"**: listagem com filtros, DataGrid e ações *Consultar*, *Incluir Novo*, *Alterar* e *Desativar/Reativar*. Cadastros nunca são excluídos, apenas inativados.
 - **Contas com parcelamento**: título mestre de contas a pagar/receber com desdobramento em parcelas e controle de saldo.
+- **Login com sessão**: acesso protegido por usuário e senha (tabela `usuario`), com cookie de sessão assinado (HMAC) válido por 7 dias.
 - **Chave de API própria**: o usuário pode informar a sua chave do Google AI Studio por um pop-up, sem depender da chave do servidor.
 - **Última atualização no GitHub**: o cabeçalho da tela principal exibe a data e o hash do último commit da branch `main`, consultados na API pública do GitHub.
 
@@ -150,6 +151,16 @@ Copie `agrocontas/backend/.env.example` para `.env`. **Nunca commite o `.env` ne
 | `DATABASE_PATH` | Caminho do arquivo SQLite local |
 | `CF_ACCOUNT_ID`, `CF_DATABASE_ID`, `CF_API_TOKEN` | Opcionais. Se definidos, o backend usa o Cloudflare D1 na nuvem no lugar do SQLite local |
 
+O backend Express escuta apenas em `127.0.0.1` e não tem autenticação real: use-o somente no desenvolvimento local.
+
+No Cloudflare Pages (e no `.dev.vars` ao rodar `pages:dev`), defina:
+
+| Variável | Descrição |
+| :-- | :-- |
+| `SESSION_SECRET` | **Obrigatória.** Segredo que assina o cookie de sessão (gere com `openssl rand -hex 32`). Sem ela a API responde 500 |
+| `GEMINI_API_KEY` | Chave do Gemini usada pelo servidor (*secret*) |
+| `APP_USER`, `APP_PASSWORD` | Opcionais. Credencial de acesso alternativa, além dos usuários da tabela `usuario` |
+
 ## Banco de dados e migrações
 
 ```bash
@@ -158,13 +169,17 @@ npm run db:migrate:local     # aplica as migrações no D1 local
 npm run db:migrate:remote    # aplica as migrações no D1 da Cloudflare
 ```
 
+Migrações em `agrocontas/frontend/migrations/`: `0001_init.sql` (tabelas do DER), `0002_usuarios.sql` (usuários de login, com contas de teste) e `0003_unique_documento.sql` (impede lançar duas vezes o mesmo documento do mesmo fornecedor). Antes da `0003`, cancele eventuais contas duplicadas já existentes, ou a migração falha.
+
+> As senhas da tabela `usuario` estão em texto puro e o seed traz usuários de teste (`admin`, `produtor`). Troque-os antes de usar em produção.
+
 ## Deploy
 
-O frontend e as Functions são publicados no **Cloudflare Pages** (`wrangler.toml` em `agrocontas/frontend`), com o banco no **D1** (binding `DB`). Configure `GEMINI_API_KEY` como *secret* no painel da Cloudflare; o modelo padrão fica em `[vars]`.
+O frontend e as Functions são publicados no **Cloudflare Pages** (`wrangler.toml` em `agrocontas/frontend`), com o banco no **D1** (binding `DB`). Configure `SESSION_SECRET` e `GEMINI_API_KEY` como *secret* no painel da Cloudflare; o modelo padrão fica em `[vars]`.
 
 ## API
 
-Todas as rotas ficam sob `/api` e respondem `{ success, data?, error? }`.
+Todas as rotas ficam sob `/api` e respondem `{ success, data?, error? }`. Exceto `/api/login` e `/api/health`, exigem o cookie de sessão (401 sem ele).
 
 | Recurso | Endpoints |
 | :-- | :-- |
@@ -172,7 +187,8 @@ Todas as rotas ficam sob `/api` e respondem `{ success, data?, error? }`.
 | Contas | `GET /api/contas`, `POST /api/contas`, `GET /api/contas/:id`, `PUT /api/contas/:id`, `PATCH /api/contas/:id/status`, `POST /api/contas/verificar`, `POST /api/contas/lancar` |
 | Pessoas | `GET /api/pessoas`, `POST /api/pessoas`, `GET /api/pessoas/:id`, `PUT /api/pessoas/:id`, `PATCH /api/pessoas/:id/status` |
 | Classificações | `GET /api/classificacoes`, `POST /api/classificacoes`, `GET /api/classificacoes/:id`, `PUT /api/classificacoes/:id`, `PATCH /api/classificacoes/:id/status` |
-| Saúde | `GET /api/health` |
+| Autenticação | `POST /api/login`, `DELETE /api/login` (sair), `GET /api/sessao` |
+| Saúde | `GET /api/health` (público) |
 
 ## Documentação
 
@@ -193,4 +209,4 @@ O repositório recebe contribuições de várias pessoas e assistentes de IA. An
 
 ---
 
-Equipe de Desenvolvimento AgroContas — UniRV, Desenvolvimento Orientado a Objetos.
+Equipe de Desenvolvimento AgroContas — UniRV, ESW424 — Prática de Engenharia de Software (SOFT6 - 238 - A).
