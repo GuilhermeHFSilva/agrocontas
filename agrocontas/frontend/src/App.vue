@@ -21,6 +21,8 @@ import { extractNfe, getSettings, getServerConfig, lancarNfe, verificarNfe } fro
 import { NfeExtracao } from "./types/nfe";
 import { LancamentoNfe, VerificacaoNfe } from "./types/conta";
 
+defineEmits<{ sair: [] }>();
+
 type AppView = "extracao" | "contas" | "pessoas" | "classificacoes";
 
 const NAV_ITEMS: { id: AppView; label: string; icon: string }[] = [
@@ -199,6 +201,15 @@ async function handleLancar() {
                 ></span>
               </button>
             </ClickSpark>
+
+            <button
+              type="button"
+              class="px-3.5 py-1.5 text-xs font-headline font-bold uppercase border-2 border-outline bg-surface hover:bg-surface-variant text-on-surface flex items-center gap-1.5 cursor-pointer shadow-[2px_2px_0px_#1a1a1a]"
+              @click="$emit('sair')"
+            >
+              <span class="material-symbols-outlined text-sm">logout</span>
+              <span>Sair</span>
+            </button>
           </div>
         </div>
       </header>
