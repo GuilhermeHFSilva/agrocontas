@@ -145,13 +145,14 @@ Copie `agrocontas/backend/.env.example` para `.env`. **Nunca commite o `.env` ne
 | Variável | Descrição |
 | :-- | :-- |
 | `PORT` | Porta do backend (padrão `3000`) |
+| `HOST` | Endereço de escuta (padrão `127.0.0.1`; `0.0.0.0` no Render) |
 | `CORS_ORIGIN` | Origem permitida no CORS |
 | `GEMINI_API_KEY` | Chave do Gemini usada pelo servidor |
 | `GEMINI_MODEL` | Modelo padrão da extração |
 | `DATABASE_PATH` | Caminho do arquivo SQLite local |
 | `CF_ACCOUNT_ID`, `CF_DATABASE_ID`, `CF_API_TOKEN` | Opcionais. Se definidos, o backend usa o Cloudflare D1 na nuvem no lugar do SQLite local |
 
-O backend Express escuta apenas em `127.0.0.1` e não tem autenticação real: use-o somente no desenvolvimento local.
+O backend Express escuta em `127.0.0.1` (ou em `HOST`, se definida; no Render usa `0.0.0.0` automaticamente) e não tem autenticação real: qualquer pessoa que alcançar a URL lê e altera os dados e usa a `GEMINI_API_KEY` do servidor.
 
 No Cloudflare Pages (e no `.dev.vars` ao rodar `pages:dev`), defina:
 

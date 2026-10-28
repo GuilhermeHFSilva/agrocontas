@@ -1,7 +1,7 @@
 import { app } from "./app";
 import { env } from "./config/env";
 
-const server = app.listen(env.PORT, "127.0.0.1", () => {
+const server = app.listen(env.PORT, env.HOST, () => {
   console.log(`Servidor rodando em: http://localhost:${env.PORT}`);
   console.log(`Healthcheck: http://localhost:${env.PORT}/api/health`);
   console.log(`Extração de NFe: POST http://localhost:${env.PORT}/api/nfe/extract`);
