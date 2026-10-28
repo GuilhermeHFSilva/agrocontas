@@ -18,17 +18,14 @@ export function createCloudflareD1Db(
 ): Db {
   const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`;
 
-  async function execute<T = any>(sql: string, params: SqlParam[] = []): Promise<T[]> {
+  async function post(body: unknown): Promise<D1QueryResponse> {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        sql,
-        params: params.length > 0 ? params : undefined,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -36,13 +33,18 @@ export function createCloudflareD1Db(
       throw new Error(`Erro na API do Cloudflare D1 (${res.status}): ${errText}`);
     }
 
-    const data = (await res.json()) as D1QueryResponse<T>;
+    const data = (await res.json()) as D1QueryResponse;
     if (!data.success || (data.errors && data.errors.length > 0)) {
       const msg = data.errors?.map((e) => e.message).join("; ") || "Erro desconhecido ao executar query no D1";
       throw new Error(`Erro no Cloudflare D1: ${msg}`);
     }
 
-    return data.result?.[0]?.results ?? [];
+    return data;
+  }
+
+  async function execute<T = any>(sql: string, params: SqlParam[] = []): Promise<T[]> {
+    const data = await post({ sql, params: params.length > 0 ? params : undefined });
+    return (data.result?.[0]?.results as T[]) ?? [];
   }
 
   return {
@@ -54,9 +56,8 @@ export function createCloudflareD1Db(
       return execute<T>(sql, params);
     },
     async batch(statements: SqlStatement[]): Promise<void> {
-      for (const { sql, params } of statements) {
-        await execute(sql, params);
-      }
+      // uma única requisição: o D1 executa o lote como transação (tudo ou nada)
+      await post({ batch: statements.map(({ sql, params = [] }) => ({ sql, params })) });
     },
   };
 }

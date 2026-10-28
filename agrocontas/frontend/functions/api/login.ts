@@ -3,8 +3,6 @@ import { jsonError, jsonResponse } from "../utils/httpResponse";
 import { SESSAO_SEGUNDOS, cookieSessao, criarToken, senhaConfere } from "../utils/sessao";
 import { createD1Db } from "../db/d1Adapter";
 
-const DEFAULT_SECRET = "agrocontas-session-secret-fallback-key-32chars";
-
 function comCookie(cookie: string): Response {
   const res = jsonResponse({ success: true });
   res.headers.append("Set-Cookie", cookie);
@@ -21,7 +19,7 @@ interface UsuarioDb {
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
-  const secret = env.SESSION_SECRET || DEFAULT_SECRET;
+  if (!env.SESSION_SECRET) return jsonError("SESSION_SECRET não configurado no servidor.", 500);
 
   try {
     const { usuario, senha } = (await request.json()) as { usuario?: unknown; senha?: unknown };
@@ -39,14 +37,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
           [usuario.trim(), usuario.trim()]
         );
 
-        if (user) {
-          if (user.senha === senha) {
-            autenticado = true;
-          } else {
-            const confere = await senhaConfere(senha, user.senha);
-            if (confere) autenticado = true;
-          }
-        }
+        if (user && (await senhaConfere(senha, user.senha))) autenticado = true;
       } catch (dbErr) {
         console.error("Erro ao consultar tabela usuario:", dbErr);
       }
@@ -64,7 +55,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       return jsonError("Usuário ou senha incorretos.", 401);
     }
 
-    return comCookie(cookieSessao(await criarToken(secret), SESSAO_SEGUNDOS));
+    return comCookie(cookieSessao(await criarToken(env.SESSION_SECRET), SESSAO_SEGUNDOS));
   } catch {
     return jsonError("Requisição inválida.", 400);
   }
