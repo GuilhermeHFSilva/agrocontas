@@ -5,6 +5,7 @@ import { BlurText, ClickSpark, DecryptedText, FadeContent, Magnet, SpotlightCard
 const emit = defineEmits<{ entrou: [] }>();
 const usuario = ref("");
 const senha = ref("");
+const mostrarSenha = ref(false);
 const erro = ref("");
 const loading = ref(false);
 
@@ -17,7 +18,13 @@ async function entrar() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ usuario: usuario.value, senha: senha.value }),
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data: any = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error(`Erro ${res.status}: O servidor não retornou resposta JSON válida.`);
+    }
     if (!res.ok) throw new Error(data.error || "Falha ao entrar.");
     emit("entrou");
   } catch (e) {
@@ -68,13 +75,55 @@ async function entrar() {
             </label>
             <label class="flex flex-col gap-1 text-xs font-mono font-bold uppercase">
               Senha
-              <input
-                v-model="senha"
-                type="password"
-                autocomplete="current-password"
-                required
-                class="border-2 border-outline bg-surface px-3 py-2 text-sm font-normal normal-case focus:outline-none focus:bg-primary-container/20 focus:shadow-[2px_2px_0px_#1a1a1a]"
-              />
+              <div class="relative flex items-center">
+                <input
+                  v-model="senha"
+                  :type="mostrarSenha ? 'text' : 'password'"
+                  autocomplete="current-password"
+                  required
+                  class="w-full border-2 border-outline bg-surface pl-3 pr-10 py-2 text-sm font-normal normal-case focus:outline-none focus:bg-primary-container/20 focus:shadow-[2px_2px_0px_#1a1a1a]"
+                />
+                <button
+                  type="button"
+                  @click="mostrarSenha = !mostrarSenha"
+                  :aria-label="mostrarSenha ? 'Ocultar senha' : 'Exibir senha'"
+                  :title="mostrarSenha ? 'Ocultar senha' : 'Exibir senha'"
+                  class="absolute right-2.5 p-1 text-on-surface-variant hover:text-on-surface focus:outline-none transition-colors cursor-pointer"
+                >
+                  <svg
+                    v-if="mostrarSenha"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  <svg
+                    v-else
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                    <line x1="2" x2="22" y1="2" y2="22" />
+                  </svg>
+                </button>
+              </div>
             </label>
 
             <p v-if="erro" role="alert" class="text-xs font-mono text-secondary">{{ erro }}</p>

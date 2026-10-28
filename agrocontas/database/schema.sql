@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS movimento_financeiro (
 );
 
 CREATE INDEX IF NOT EXISTS idx_contas_fornecedor_doc ON movimento_contas (id_fornecedor, numero_documento);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_contas_documento ON movimento_contas (id_fornecedor, numero_documento, tipo_operacao) WHERE status <> 'CANCELADA';
 CREATE INDEX IF NOT EXISTS idx_parcelas_conta ON movimento_parcelas (id_movimento_conta);
 CREATE INDEX IF NOT EXISTS idx_mov_parcela ON movimento_financeiro (id_movimento_parcela);
 

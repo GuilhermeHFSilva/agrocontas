@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS movimento_financeiro (
 );
 
 CREATE INDEX IF NOT EXISTS idx_contas_fornecedor_documento ON movimento_contas (id_fornecedor, numero_documento);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_contas_documento ON movimento_contas (id_fornecedor, numero_documento, tipo_operacao) WHERE status <> 'CANCELADA';
 
 CREATE TABLE IF NOT EXISTS usuario (
   id_usuario    INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,4 +82,4 @@ INSERT OR IGNORE INTO usuario (nome, usuario, email, senha, nivel_acesso, status
   ('ADM', 'admin', 'admin@agrocontas.com.br', 'admin123', 'ADMIN', 'ATIVO'),
   ('PRODUTOR', 'produtor', 'produtor@agrocontas.com.br', 'agro123', 'OPERADOR', 'ATIVO');
 `;
-
+

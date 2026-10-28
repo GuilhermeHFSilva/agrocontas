@@ -78,6 +78,10 @@ function montarParcelas(nfe: NfeExtracao): ParcelaLancamento[] {
       throw new ServiceError(`Valor inválido na parcela ${parcela.numero}.`);
     }
   }
+  const soma = arredondar(parcelas.reduce((total, parcela) => total + parcela.valor, 0));
+  if (soma !== arredondar(nfe.valorTotal)) {
+    throw new ServiceError(`A soma das parcelas (${soma}) difere do valor total da nota (${arredondar(nfe.valorTotal)}).`);
+  }
   return parcelas;
 }
 
