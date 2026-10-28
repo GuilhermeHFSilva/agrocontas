@@ -32,7 +32,6 @@ async function entrar() {
   <div class="relative min-h-screen bg-surface font-body text-on-surface flex items-center justify-center px-4 overflow-hidden">
     <Squares direction="diagonal" :speed="0.6" :squareSize="48" borderColor="rgba(26, 26, 26, 0.09)" hoverFillColor="rgba(255, 204, 0, 0.25)" />
 
-    <!-- Blocos flutuantes no estilo brutalista do tema -->
     <div class="login-bloco w-16 h-16 bg-primary-container top-[12%] left-[10%]" aria-hidden="true"></div>
     <div class="login-bloco w-10 h-10 bg-secondary top-[70%] left-[16%] [animation-delay:-3s]" aria-hidden="true"></div>
     <div class="login-bloco w-20 h-20 bg-tertiary-container top-[18%] right-[12%] [animation-delay:-5s]" aria-hidden="true"></div>

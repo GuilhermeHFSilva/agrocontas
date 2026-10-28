@@ -1,5 +1,4 @@
-// Erro de regra de negócio/validação com o status HTTP correspondente.
-// Mantenha este arquivo idêntico a backend/src/utils/serviceError.ts.
+
 export class ServiceError extends Error {
   public readonly statusCode: number;
 

@@ -7,7 +7,6 @@ function chave(secret: string, usos: ("sign" | "verify")[]): Promise<CryptoKey> 
 
 const toHex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
 
-// Token = "<expira em ms>.<HMAC-SHA256 hex>", guardado em cookie HttpOnly.
 export async function criarToken(secret: string): Promise<string> {
   const exp = String(Date.now() + SESSAO_SEGUNDOS * 1000);
   const sig = await crypto.subtle.sign("HMAC", await chave(secret, ["sign"]), enc.encode(exp));

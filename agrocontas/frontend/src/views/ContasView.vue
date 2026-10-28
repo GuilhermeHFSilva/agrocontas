@@ -77,7 +77,6 @@ function emptyForm(): ContaForm {
   };
 }
 
-// Contas só podem ser alteradas enquanto ABERTAS; nos demais casos o formulário é apenas consulta.
 const somenteLeitura = computed(() => editingStatus.value !== null && editingStatus.value !== "ABERTA");
 
 const rotuloFornecedor = computed(() => (form.value.tipoOperacao === "PAGAR" ? "Fornecedor" : "Emitente (titular)"));
@@ -111,7 +110,6 @@ async function buscar() {
   }
 }
 
-// "Todos" carrega as contas ativas (não canceladas), sem outros filtros.
 function todos() {
   filtros.value = { q: "", tipoOperacao: "", status: "ATIVAS", vencimentoDe: "", vencimentoAte: "" };
   return buscar();
@@ -153,7 +151,7 @@ function editar(conta: ContaResumo) {
   editingStatus.value = conta.status;
   return abrirModal(async () => {
     const detalhe = await contasApi.obter(conta.id);
-    // Cadastros hoje inativos continuam visíveis na conta já lançada.
+    
     for (const [id, nome] of [
       [detalhe.fornecedorId, detalhe.fornecedorNome],
       [detalhe.faturadoId, detalhe.faturadoNome],
@@ -238,7 +236,6 @@ async function salvar() {
   }
 }
 
-// Exclusão lógica: a conta fica CANCELADA e pode ser reativada (ABERTA) depois.
 async function alterarStatus(conta: ContaResumo) {
   const ativar = conta.status === "CANCELADA";
   if (!ativar && !window.confirm(`Excluir a conta ${conta.numeroDocumento}? Ela ficará CANCELADA (exclusão lógica).`)) return;

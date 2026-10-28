@@ -3,7 +3,6 @@ import { onMounted, ref } from "vue";
 import App from "./App.vue";
 import LoginView from "./views/LoginView.vue";
 
-// null = verificando a sessão
 const autenticado = ref<boolean | null>(null);
 
 onMounted(async () => {

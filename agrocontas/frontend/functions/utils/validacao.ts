@@ -1,8 +1,5 @@
 import { ServiceError } from "./serviceError";
 
-// Validações e normalizações compartilhadas pelos serviços de cadastro.
-// Mantenha este arquivo idêntico a backend/src/utils/validacao.ts.
-
 const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 export function arredondar(valor: number): number {
@@ -60,8 +57,6 @@ export function valorPositivo(valor: unknown, campo: string): number {
   return arredondar(valor);
 }
 
-// Padroniza CPF/CNPJ para a forma mascarada, garantindo que "11111111000100" e
-// "11.111.111/0001-00" sejam o mesmo cadastro (coluna cpf_cnpj é UNIQUE).
 export function formatarCpfCnpj(valor: unknown, rotulo = "CPF/CNPJ"): {
   cpfCnpj: string;
   tipoPessoa: "FISICA" | "JURIDICA";
@@ -82,7 +77,6 @@ export function formatarCpfCnpj(valor: unknown, rotulo = "CPF/CNPJ"): {
   throw new ServiceError(`${rotulo} inválido: informe 11 (CPF) ou 14 (CNPJ) dígitos.`);
 }
 
-// Padrão para LIKE com os curingas (% e _) digitados pelo usuário escapados (usar com ESCAPE '\').
 export function padraoLike(termo: string): string {
   return `%${termo.replace(/[\\%_]/g, "\\$&")}%`;
 }

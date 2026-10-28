@@ -42,7 +42,7 @@ function handleMouseLeave() {
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
-    <!-- Spotlight highlight layer -->
+    
     <div
       class="pointer-events-none absolute -inset-px transition-opacity duration-300 z-10"
       :style="{

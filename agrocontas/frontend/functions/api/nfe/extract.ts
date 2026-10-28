@@ -2,7 +2,7 @@ import { Env } from "../../types/env";
 import { geminiService } from "../../services/geminiService";
 import { jsonError, jsonSuccess } from "../../utils/httpResponse";
 
-const MAX_PDF_SIZE_BYTES = 15 * 1024 * 1024; // 15MB
+const MAX_PDF_SIZE_BYTES = 15 * 1024 * 1024; 
 
 function isPdfFile(file: File): boolean {
   return (

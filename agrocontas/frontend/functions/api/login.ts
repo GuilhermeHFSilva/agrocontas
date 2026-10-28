@@ -15,7 +15,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
     const { usuario, senha } = (await request.json()) as { usuario?: unknown; senha?: unknown };
     if (typeof usuario !== "string" || typeof senha !== "string") return jsonError("Requisição inválida.", 400);
-    // Avalia os dois sempre, para não revelar qual campo errou.
+    
     const [okUsuario, okSenha] = await Promise.all([
       senhaConfere(usuario, env.APP_USER),
       senhaConfere(senha, env.APP_PASSWORD),

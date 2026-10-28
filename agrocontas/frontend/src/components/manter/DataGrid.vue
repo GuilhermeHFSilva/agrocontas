@@ -12,7 +12,7 @@ const props = defineProps<{
   columns: GridColumn[];
   rows: T[];
   loading: boolean;
-  // false até a primeira consulta: a tabela começa vazia e orienta o uso de Buscar / Todos.
+  
   searched: boolean;
   isInactive?: (row: T) => boolean;
 }>();

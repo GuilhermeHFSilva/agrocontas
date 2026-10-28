@@ -41,7 +41,6 @@ export class PessoaController {
     );
   }
 
-  // Exclusão lógica / reativação: corpo { "ativo": false | true }.
   async alterarStatus(req: Request, res: Response<ApiResponse<Pessoa>>): Promise<void> {
     await responder(
       res,

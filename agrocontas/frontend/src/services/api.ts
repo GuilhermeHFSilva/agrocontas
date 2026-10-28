@@ -154,12 +154,10 @@ async function postNfe<T>(path: string, nfe: NfeExtracao, fallbackError: string)
   return data.data;
 }
 
-// Consulta no banco se Fornecedor, Faturado e Despesa da nota já existem.
 export function verificarNfe(nfe: NfeExtracao): Promise<VerificacaoNfe> {
   return postNfe<VerificacaoNfe>("/api/contas/verificar", nfe, "Falha ao consultar o banco de dados.");
 }
 
-// Cria os cadastros ausentes, o movimento de contas a pagar e suas parcelas.
 export function lancarNfe(nfe: NfeExtracao): Promise<LancamentoNfe> {
   return postNfe<LancamentoNfe>("/api/contas/lancar", nfe, "Falha ao lançar o registro.");
 }

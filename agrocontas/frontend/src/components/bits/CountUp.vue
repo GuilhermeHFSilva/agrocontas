@@ -33,7 +33,7 @@ function startCount() {
   function update(now: number) {
     const elapsed = now - startTime;
     const progress = Math.min(elapsed / durationMs, 1);
-    // Easing out cubic: 1 - Math.pow(1 - progress, 3)
+    
     const eased = 1 - Math.pow(1 - progress, 3);
     current.value = start + (end - start) * eased;
 

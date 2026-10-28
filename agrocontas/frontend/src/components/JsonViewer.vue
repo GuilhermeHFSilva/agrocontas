@@ -44,7 +44,7 @@ async function copyToClipboard() {
 <template>
   <FadeContent :duration="450" direction="up">
     <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-5 shadow-[5px_5px_0px_#1a1a1a] mb-6">
-      <!-- Header -->
+      
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-outline mb-4">
         <div>
           <div class="flex items-center gap-2">
@@ -79,12 +79,10 @@ async function copyToClipboard() {
         </ClickSpark>
       </div>
 
-      <!-- Terminal Code Box -->
       <div class="border-2 border-outline bg-primary text-surface p-4 font-mono text-xs max-h-[520px] overflow-auto shadow-[4px_4px_0px_#1a1a1a] transition-all duration-200">
         <pre class="leading-relaxed"><code>{{ jsonFormatted }}</code></pre>
       </div>
 
-      <!-- Footer Note -->
       <div class="mt-3 flex items-center justify-between text-[11px] font-mono text-on-surface-variant">
         <span>Codificação: UTF-8 • Formato Canônico DOO UniRV</span>
         <span class="font-bold">STATUS: VÁLIDO</span>

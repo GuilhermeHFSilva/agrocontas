@@ -1,7 +1,3 @@
--- AgroContas: modelo relacional oficial (DER com 5 entidades, docs/DOCUMENTACAO_REQUISITOS_RESUMO.txt).
--- Regras de negócio: cadastros nunca são excluídos; são apenas INATIVADOS (status lógico) e podem ser reativados.
--- Mantenha este arquivo idêntico ao conteúdo de backend/src/db/schema.ts.
-
 CREATE TABLE IF NOT EXISTS fornecedor_cliente (
   id_pessoa     INTEGER PRIMARY KEY AUTOINCREMENT,
   razao_social  TEXT NOT NULL,
@@ -66,7 +62,6 @@ CREATE INDEX IF NOT EXISTS idx_contas_fornecedor_doc ON movimento_contas (id_for
 CREATE INDEX IF NOT EXISTS idx_parcelas_conta ON movimento_parcelas (id_movimento_conta);
 CREATE INDEX IF NOT EXISTS idx_mov_parcela ON movimento_financeiro (id_movimento_parcela);
 
--- Carga inicial de categorias agropecuárias (UniRV)
 INSERT OR IGNORE INTO despesas_receitas (descricao, tipo, grupo_operacional, centro_custo, status) VALUES
   ('INSUMOS AGRÍCOLAS', 'DESPESA', 'Lavouras e Culturas', 'Produção Rural', 'ATIVO'),
   ('MANUTENÇÃO E OPERAÇÃO', 'DESPESA', 'Máquinas e Equipamentos', 'Oficina e Campo', 'ATIVO'),

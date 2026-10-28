@@ -4,8 +4,6 @@ import { idValido, opcaoValida, padraoLike, textoObrigatorio, textoOpcional } fr
 import { CategoriaFiltros, CategoriaInput, CategoriaItem, TipoCategoria } from "../../src/types/cadastros";
 import { StatusCadastro } from "../../src/types/conta";
 
-// Mantenha este arquivo idêntico a backend/src/services/classificacaoService.ts.
-
 const TIPOS = ["DESPESA", "RECEITA"] as const;
 const LIMITE_LISTAGEM = 500;
 
@@ -31,8 +29,6 @@ function paraCategoria(row: CategoriaRow): CategoriaItem {
   };
 }
 
-// A descrição é gravada em maiúsculas, o mesmo padrão usado pela extração de PDF, para que
-// "Manutenção e Operação" digitado aqui seja reconhecido como a classificação já existente.
 function normalizarEntrada(input: CategoriaInput) {
   if (!input || typeof input !== "object") throw new ServiceError("Dados da classificação ausentes.");
   return {
@@ -119,7 +115,6 @@ export async function atualizarCategoria(db: Db, idBruto: unknown, input: Catego
   const dados = normalizarEntrada(input);
   await garantirDescricaoLivre(db, dados.tipo, dados.descricao, atual.id);
 
-  // Trocar Despesa por Receita (ou vice-versa) quebraria contas que já usam esta classificação.
   if (dados.tipo !== atual.tipo) {
     const emUso = await db.first<{ id_conta: number }>(
       "SELECT id_conta FROM movimento_contas WHERE id_despesa_receita = ? LIMIT 1",
