@@ -24,3 +24,4 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
+.dev.vars

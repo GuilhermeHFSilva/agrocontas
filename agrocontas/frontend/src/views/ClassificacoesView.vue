@@ -52,7 +52,6 @@ async function buscar() {
   }
 }
 
-// "Todos" carrega os registros com status ATIVO, sem outros filtros.
 function todos() {
   filtros.value = { q: "", tipo: "", status: "ATIVO" };
   return buscar();
@@ -96,7 +95,6 @@ async function salvar() {
   }
 }
 
-// Exclusão lógica: o registro vira INATIVO e pode ser reativado depois.
 async function alterarStatus(item: CategoriaItem) {
   const ativar = item.status === "INATIVO";
   if (!ativar && !window.confirm(`Excluir "${item.descricao}"? A classificação ficará INATIVA (exclusão lógica).`)) return;

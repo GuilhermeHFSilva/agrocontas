@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 
-// Repositório e branch exibidos na tela principal (requisito: "Código Última Atualização no Github").
 const REPO = "GuilhermeHFSilva/agrocontas";
 const BRANCH = "main";
 const API_URL = `https://api.github.com/repos/${REPO}/commits/${BRANCH}`;
 
-// A API pública do GitHub limita a 60 requisições/hora por IP; o cache em sessionStorage evita estourar o limite.
 const CACHE_KEY = "agrocontas:ultimo-commit";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -77,7 +75,7 @@ async function carregar() {
     };
     salvarCache({ salvoEm: Date.now(), commit: commit.value });
   } catch {
-    // Em caso de falha (rede, limite de taxa), reaproveita o último valor conhecido, mesmo expirado.
+    
     if (cache) commit.value = cache.commit;
     else failed.value = true;
   } finally {

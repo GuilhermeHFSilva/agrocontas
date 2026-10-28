@@ -57,7 +57,7 @@ function handleClick(e: MouseEvent) {
 <template>
   <div class="relative overflow-hidden inline-block" @click="handleClick">
     <slot />
-    <!-- Sparks container -->
+    
     <svg
       v-if="sparks.length > 0"
       class="pointer-events-none absolute inset-0 w-full h-full z-30"

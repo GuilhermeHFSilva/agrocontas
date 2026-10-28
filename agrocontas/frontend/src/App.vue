@@ -21,6 +21,8 @@ import { extractNfe, getSettings, getServerConfig, lancarNfe, verificarNfe } fro
 import { NfeExtracao } from "./types/nfe";
 import { LancamentoNfe, VerificacaoNfe } from "./types/conta";
 
+defineEmits<{ sair: [] }>();
+
 type AppView = "extracao" | "contas" | "pessoas" | "classificacoes";
 
 const NAV_ITEMS: { id: AppView; label: string; icon: string }[] = [
@@ -103,7 +105,7 @@ async function handleExtract() {
   try {
     const result = await extractNfe(selectedFile.value);
     extractedData.value = result.data;
-    // 2ª etapa: após a extração, analisa no banco se Fornecedor, Faturado e Despesa já existem.
+    
     verificacao.value = await verificarNfe(result.data);
     if (result.model) {
       activeModel.value = result.model;
@@ -136,7 +138,7 @@ async function handleLancar() {
 
 <template>
   <div class="relative min-h-screen bg-surface font-body text-on-surface overflow-x-hidden">
-    <!-- Animated Subtle Background (Vue Bits Squares) -->
+    
     <Squares
       :speed="0.25"
       :squareSize="48"
@@ -144,12 +146,11 @@ async function handleLancar() {
       hoverFillColor="rgba(255, 204, 0, 0.09)"
     />
 
-    <!-- Main Wrapper (Above Background) -->
     <div class="relative z-10">
-      <!-- Top Navigation & Brand -->
+      
       <header class="border-b-2 border-outline bg-surface-bright/90 backdrop-blur-sm px-4 sm:px-8 py-3.5">
         <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <!-- Logo & Platform Info -->
+          
           <div class="flex items-center gap-3">
             <Magnet :magnetStrength="3" :padding="20">
               <div class="w-10 h-10 bg-primary-container border-2 border-outline flex items-center justify-center font-headline font-black text-lg text-on-primary-container shadow-[2px_2px_0px_#1a1a1a]">
@@ -172,7 +173,6 @@ async function handleLancar() {
             </div>
           </div>
 
-          <!-- Status & API Key Action -->
           <div class="flex items-center gap-3">
             <div class="flex items-center gap-2 px-2.5 py-1 bg-surface-container border border-outline text-[11px] font-mono text-on-surface">
               <span>IA:</span>
@@ -184,7 +184,6 @@ async function handleLancar() {
               ></span>
             </div>
 
-            <!-- Botão de Chave API (Abre Modal Pop-up) -->
             <ClickSpark sparkColor="#1a1a1a">
               <button
                 class="px-3.5 py-1.5 text-xs font-headline font-bold uppercase border-2 border-outline bg-surface hover:bg-surface-variant text-on-surface transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[2px_2px_0px_#1a1a1a]"
@@ -199,12 +198,19 @@ async function handleLancar() {
                 ></span>
               </button>
             </ClickSpark>
+
+            <button
+              type="button"
+              class="px-3.5 py-1.5 text-xs font-headline font-bold uppercase border-2 border-outline bg-surface hover:bg-surface-variant text-on-surface flex items-center gap-1.5 cursor-pointer shadow-[2px_2px_0px_#1a1a1a]"
+              @click="$emit('sair')"
+            >
+              <span class="material-symbols-outlined text-sm">logout</span>
+              <span>Sair</span>
+            </button>
           </div>
         </div>
       </header>
 
-      <!-- Main Content Container -->
-      <!-- Navegação entre os módulos -->
       <nav class="border-b-2 border-outline bg-surface-container px-4 sm:px-8" aria-label="Módulos">
         <div class="max-w-6xl mx-auto flex flex-wrap gap-1.5 py-2">
           <button
@@ -229,9 +235,8 @@ async function handleLancar() {
         <PessoasView v-else-if="currentView === 'pessoas'" />
         <ClassificacoesView v-else-if="currentView === 'classificacoes'" />
 
-        <!-- Extração de NF-e (v-show mantém o resultado ao navegar entre os módulos) -->
         <div v-show="currentView === 'extracao'">
-        <!-- Clean Hero Section -->
+        
         <FadeContent :duration="400" direction="up">
           <div class="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b-2 border-outline/30">
             <div>
@@ -256,9 +261,8 @@ async function handleLancar() {
           </div>
         </FadeContent>
 
-        <!-- View: Extração de NF-e -->
         <div>
-          <!-- Warning Banner (se chave ausente) -->
+          
           <FadeContent v-if="!hasApiKey" :duration="350" direction="up">
             <div class="w-full bg-primary-container border-2 border-outline p-4 mb-6 shadow-[3px_3px_0px_#1a1a1a] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div class="flex items-center gap-3">
@@ -284,7 +288,6 @@ async function handleLancar() {
             </div>
           </FadeContent>
 
-          <!-- Error Alert -->
           <FadeContent v-if="errorMessage" :duration="350" direction="up">
             <div class="w-full bg-secondary-container border-2 border-secondary p-4 mb-6 shadow-[3px_3px_0px_#e63b2e] text-on-surface flex items-start gap-3">
               <span class="material-symbols-outlined text-xl text-secondary font-bold">error</span>
@@ -299,7 +302,6 @@ async function handleLancar() {
             </div>
           </FadeContent>
 
-          <!-- Componente de Upload -->
           <FileUpload
             :loading="loading"
             :selected-file="selectedFile"
@@ -307,7 +309,6 @@ async function handleLancar() {
             @extract="handleExtract"
           />
 
-          <!-- Loading Indicator -->
           <FadeContent v-if="loading" :duration="350" direction="up">
             <div class="border-2 border-outline bg-surface-container-lowest p-8 shadow-[4px_4px_0px_#1a1a1a] mb-6 text-center">
               <div class="flex flex-col items-center justify-center gap-3">
@@ -325,9 +326,8 @@ async function handleLancar() {
             </div>
           </FadeContent>
 
-          <!-- Extracted Data Section -->
           <div v-if="extractedData && !loading" class="mt-8">
-            <!-- Mode Switcher Sub-Bar -->
+            
             <FadeContent :duration="350" direction="up">
               <div class="border-2 border-outline bg-surface-container-lowest p-3.5 mb-6 shadow-[3px_3px_0px_#1a1a1a] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
@@ -368,7 +368,6 @@ async function handleLancar() {
               </div>
             </FadeContent>
 
-            <!-- Análise no banco de dados (2ª etapa) -->
             <FadeContent v-if="verificacao" :duration="350" direction="up">
               <VerificacaoBanco
                 :verificacao="verificacao"
@@ -378,7 +377,6 @@ async function handleLancar() {
               />
             </FadeContent>
 
-            <!-- Viewers -->
             <FormattedViewer
               v-if="activeViewTab === 'formatted'"
               :data="extractedData"
@@ -393,7 +391,6 @@ async function handleLancar() {
 
         </div>
 
-        <!-- Clean Footer -->
         <FadeContent :duration="400" :delay="150" direction="up">
           <footer class="mt-12 pt-4 border-t-2 border-outline/30 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-on-surface-variant gap-2">
             <div>
@@ -408,7 +405,6 @@ async function handleLancar() {
       </main>
     </div>
 
-    <!-- Modal Pop-up para Configuração da Chave de API do AI Studio -->
     <ApiKeyModal
       :is-open="isApiKeyModalOpen"
       @close="isApiKeyModalOpen = false"

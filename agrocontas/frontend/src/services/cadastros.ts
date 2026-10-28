@@ -47,7 +47,6 @@ async function request<T>(
   return payload.data;
 }
 
-// O status é sempre enviado: a listagem padrão ("Todos") traz apenas os registros ATIVO / ATIVAS.
 export const pessoasApi = {
   listar: (filtros: PessoaFiltros) =>
     request<Pessoa[]>("GET", "/api/pessoas", {
@@ -74,7 +73,7 @@ export const classificacoesApi = {
 export const contasApi = {
   listar: (filtros: ContaFiltros) =>
     request<ContaResumo[]>("GET", "/api/contas", {
-      // status "" (todas, inclusive canceladas) precisa ir explícito: sem o parâmetro o servidor assume ATIVAS.
+      
       query: {
         q: filtros.q,
         tipoOperacao: filtros.tipoOperacao,

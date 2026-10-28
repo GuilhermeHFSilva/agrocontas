@@ -11,8 +11,6 @@ import {
 import { Classificacao, Pessoa, PessoaFiltros, PessoaInput, TipoPessoa } from "../../src/types/cadastros";
 import { StatusCadastro } from "../../src/types/conta";
 
-// Mantenha este arquivo idêntico a backend/src/services/pessoaService.ts.
-
 const CLASSIFICACOES = ["FORNECEDOR", "CLIENTE", "AMBOS"] as const;
 const LIMITE_LISTAGEM = 500;
 
@@ -82,8 +80,6 @@ export async function obterPessoa(db: Db, idBruto: unknown): Promise<Pessoa> {
   return paraPessoa(row);
 }
 
-// Busca por mais de um elemento: o texto é procurado em nome, fantasia, CPF/CNPJ (com ou sem máscara),
-// e-mail e telefone; os demais filtros se combinam (E) com o texto.
 export async function listarPessoas(db: Db, filtros: PessoaFiltros = {}): Promise<Pessoa[]> {
   const condicoes: string[] = [];
   const params: SqlParam[] = [];
@@ -126,7 +122,6 @@ export async function listarPessoas(db: Db, filtros: PessoaFiltros = {}): Promis
   return rows.map(paraPessoa);
 }
 
-// O status não é informado pelo usuário: todo cadastro novo nasce ATIVO.
 export async function criarPessoa(db: Db, input: PessoaInput): Promise<Pessoa> {
   const dados = normalizarEntrada(input);
   await garantirCpfCnpjLivre(db, dados.cpfCnpj);
@@ -155,7 +150,6 @@ export async function criarPessoa(db: Db, input: PessoaInput): Promise<Pessoa> {
   return paraPessoa(row);
 }
 
-// A alteração não mexe no status (campo oculto no formulário).
 export async function atualizarPessoa(db: Db, idBruto: unknown, input: PessoaInput): Promise<Pessoa> {
   const atual = await obterPessoa(db, idBruto);
   const dados = normalizarEntrada(input);
@@ -182,7 +176,6 @@ export async function atualizarPessoa(db: Db, idBruto: unknown, input: PessoaInp
   return obterPessoa(db, atual.id);
 }
 
-// Exclusão lógica (ativo = false -> INATIVO) e reativação (ativo = true -> ATIVO). Nada é excluído fisicamente.
 export async function alterarStatusPessoa(db: Db, idBruto: unknown, ativo: unknown): Promise<Pessoa> {
   if (typeof ativo !== "boolean") throw new ServiceError('Informe "ativo" como verdadeiro ou falso.');
   const atual = await obterPessoa(db, idBruto);

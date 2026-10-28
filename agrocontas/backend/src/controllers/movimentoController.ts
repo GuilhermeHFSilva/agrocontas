@@ -43,7 +43,6 @@ export class MovimentoController {
     );
   }
 
-  // Exclusão lógica (CANCELADA) / reativação (ABERTA): corpo { "ativo": false | true }.
   async alterarStatus(req: Request, res: Response<ApiResponse<ContaDetalhe>>): Promise<void> {
     await responder(
       res,

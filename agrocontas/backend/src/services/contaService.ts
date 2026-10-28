@@ -10,8 +10,6 @@ import {
   VerificacaoNfe,
 } from "../types/conta";
 
-// Mantenha este arquivo idêntico a backend/src/services/contaService.ts.
-
 interface PessoaRow {
   id_pessoa: number;
   status: StatusCadastro;
@@ -62,7 +60,6 @@ function normalizarDescricaoDespesa(descricao: string): string {
 function montarParcelas(nfe: NfeExtracao): ParcelaLancamento[] {
   const informadas = Array.isArray(nfe.parcelas) ? nfe.parcelas : [];
 
-  // Sem desdobramento informado, a conta possui uma única parcela (identificação "ÚNICA").
   const parcelas: ParcelaLancamento[] =
     informadas.length > 0
       ? [...informadas].sort((a, b) => a.numero - b.numero)
@@ -141,7 +138,6 @@ async function buscarContaExistente(db: Db, idFornecedor: number, numeroDocument
   return row ? { id: row.id_conta } : null;
 }
 
-// Consulta o banco e informa se Fornecedor, Faturado e Despesa já existem (sem alterar nada).
 export async function verificarNfe(db: Db, nfe: NfeExtracao): Promise<VerificacaoNfe> {
   validarNfe(nfe);
   const { fornecedor, faturado, despesa } = normalizarParticipantes(nfe);
@@ -176,7 +172,7 @@ function comandosPessoa(pessoa: PessoaNormalizada, classificacao: "FORNECEDOR" |
             VALUES (?, ?, ?, ?, ?, 'ATIVO')`,
       params: [pessoa.nome, pessoa.nomeFantasia, pessoa.cpfCnpj, pessoa.tipoPessoa, classificacao],
     },
-    // Quem já era cadastrado com o outro papel passa a ser AMBOS; cadastros inativos são reativados.
+    
     {
       sql: `UPDATE fornecedor_cliente
                SET status = 'ATIVO',
@@ -187,8 +183,6 @@ function comandosPessoa(pessoa: PessoaNormalizada, classificacao: "FORNECEDOR" |
   ];
 }
 
-// Cria o que não existe (Fornecedor, Faturado, Despesa), o registro do movimento (MOVIMENTO_CONTAS) e suas
-// parcelas. Tudo em uma única transação: se algo falhar, nada é gravado.
 export async function lancarNfe(db: Db, nfe: NfeExtracao): Promise<LancamentoNfe> {
   validarNfe(nfe);
   const numeroDocumento = validarConta(nfe);

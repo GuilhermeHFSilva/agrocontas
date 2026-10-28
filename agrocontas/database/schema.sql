@@ -1,14 +1,3 @@
--- ==============================================================================
--- AGROCONTAS — MODELO DE BANCO DE DADOS RELACIONAL (DER OFICIAL COM 5 ENTIDADES)
--- Compatível com: Cloudflare D1 (SQLite na Borda) e SQLite Local
--- Disciplina: Desenvolvimento Orientado a Objetos (DOO) - UniRV
--- ==============================================================================
-
--- ------------------------------------------------------------------------------
--- 1. TABELA: FORNECEDOR_CLIENTE (RF01)
--- Representa parceiros comerciais (Fornecedores de insumos/serviços, Clientes e Faturados).
--- Regra de Negócio: Exclusão lógica obrigatória (status ATIVO/INATIVO).
--- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS fornecedor_cliente (
   id_pessoa     INTEGER PRIMARY KEY AUTOINCREMENT,
   razao_social  TEXT NOT NULL,
@@ -21,11 +10,6 @@ CREATE TABLE IF NOT EXISTS fornecedor_cliente (
   status        TEXT NOT NULL DEFAULT 'ATIVO' CHECK (status IN ('ATIVO', 'INATIVO'))
 );
 
--- ------------------------------------------------------------------------------
--- 2. TABELA: DESPESAS_RECEITAS (RF02)
--- Catálogo do plano de contas rural (Tipos de Despesa e Tipos de Receita).
--- Regra de Negócio: Exclusão lógica obrigatória (status ATIVO/INATIVO).
--- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS despesas_receitas (
   id_categoria      INTEGER PRIMARY KEY AUTOINCREMENT,
   descricao         TEXT NOT NULL,
@@ -36,11 +20,6 @@ CREATE TABLE IF NOT EXISTS despesas_receitas (
   UNIQUE (tipo, descricao)
 );
 
--- ------------------------------------------------------------------------------
--- 3. TABELA: MOVIMENTO_CONTAS (RF03)
--- Registros mestre de Contas a Pagar e Contas a Receber.
--- Relacionamentos FK com fornecedor_cliente (fornecedor e faturado) e despesas_receitas.
--- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS movimento_contas (
   id_conta           INTEGER PRIMARY KEY AUTOINCREMENT,
   id_despesa_receita INTEGER NOT NULL REFERENCES despesas_receitas (id_categoria),
@@ -56,10 +35,6 @@ CREATE TABLE IF NOT EXISTS movimento_contas (
   status             TEXT NOT NULL DEFAULT 'ABERTA' CHECK (status IN ('ABERTA', 'QUITADA', 'CANCELADA'))
 );
 
--- ------------------------------------------------------------------------------
--- 4. TABELA: MOVIMENTO_PARCELAS (RF04)
--- Desdobramento das contas em parcelas a prazo com vencimentos distintos e controle de saldo.
--- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS movimento_parcelas (
   id_parcela         INTEGER PRIMARY KEY AUTOINCREMENT,
   id_movimento_conta INTEGER NOT NULL REFERENCES movimento_contas (id_conta),
@@ -71,10 +46,6 @@ CREATE TABLE IF NOT EXISTS movimento_parcelas (
   UNIQUE (id_movimento_conta, numero_parcela)
 );
 
--- ------------------------------------------------------------------------------
--- 5. TABELA: MOVIMENTO_FINANCEIRO (RF05)
--- Quitações, pagamentos e liquidações das parcelas.
--- ------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS movimento_financeiro (
   id_movimento         INTEGER PRIMARY KEY AUTOINCREMENT,
   id_movimento_parcela INTEGER NOT NULL REFERENCES movimento_parcelas (id_parcela),
@@ -87,17 +58,10 @@ CREATE TABLE IF NOT EXISTS movimento_financeiro (
   status               TEXT NOT NULL DEFAULT 'CONFIRMADO' CHECK (status IN ('CONFIRMADO', 'ESTORNADO'))
 );
 
--- ------------------------------------------------------------------------------
--- ÍNDICES DE PERFORMANCE
--- ------------------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_contas_fornecedor_doc ON movimento_contas (id_fornecedor, numero_documento);
 CREATE INDEX IF NOT EXISTS idx_parcelas_conta ON movimento_parcelas (id_movimento_conta);
 CREATE INDEX IF NOT EXISTS idx_mov_parcela ON movimento_financeiro (id_movimento_parcela);
 
--- ------------------------------------------------------------------------------
--- CARGA INICIAL: 9 CATEGORIAS OFICIAIS DE DESPESA DO AGRONEGÓCIO (UniRV)
--- E PRINCIPAIS CATEGORIAS DE RECEITA
--- ------------------------------------------------------------------------------
 INSERT OR IGNORE INTO despesas_receitas (descricao, tipo, grupo_operacional, centro_custo, status) VALUES
   ('INSUMOS AGRÍCOLAS', 'DESPESA', 'Lavouras e Culturas', 'Produção Rural', 'ATIVO'),
   ('MANUTENÇÃO E OPERAÇÃO', 'DESPESA', 'Máquinas e Equipamentos', 'Oficina e Campo', 'ATIVO'),
@@ -111,3 +75,22 @@ INSERT OR IGNORE INTO despesas_receitas (descricao, tipo, grupo_operacional, cen
   ('VENDA DA SAFRA', 'RECEITA', 'Comercialização de Grãos', 'Receitas Agrícolas', 'ATIVO'),
   ('PRESTAÇÃO DE SERVIÇOS AGRÍCOLAS', 'RECEITA', 'Locação de Máquinas e Serviços', 'Receitas Operacionais', 'ATIVO'),
   ('ARRENDAMENTO RECEBIDO', 'RECEITA', 'Rendas Imobiliárias', 'Receitas Patrimoniais', 'ATIVO');
+
+CREATE TABLE IF NOT EXISTS usuario (
+  id_usuario    INTEGER PRIMARY KEY AUTOINCREMENT,
+  nome          TEXT NOT NULL,
+  usuario       TEXT NOT NULL UNIQUE,
+  email         TEXT NOT NULL UNIQUE,
+  senha         TEXT NOT NULL,
+  nivel_acesso  TEXT NOT NULL DEFAULT 'OPERADOR' CHECK (nivel_acesso IN ('ADMIN', 'OPERADOR')),
+  status        TEXT NOT NULL DEFAULT 'ATIVO' CHECK (status IN ('ATIVO', 'INATIVO')),
+  criado_em     TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+  atualizado_em TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+);
+
+CREATE INDEX IF NOT EXISTS idx_usuario_login ON usuario (usuario);
+CREATE INDEX IF NOT EXISTS idx_usuario_email ON usuario (email);
+
+INSERT OR IGNORE INTO usuario (nome, usuario, email, senha, nivel_acesso, status) VALUES
+  ('ADM', 'admin', 'admin@agrocontas.com.br', 'admin123', 'ADMIN', 'ATIVO'),
+  ('PRODUTOR', 'produtor', 'produtor@agrocontas.com.br', 'agro123', 'OPERADOR', 'ATIVO');

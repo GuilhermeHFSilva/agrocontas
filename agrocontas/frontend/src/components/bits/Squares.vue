@@ -65,10 +65,9 @@ function drawGrid() {
   ctx.lineWidth = 1;
   ctx.strokeStyle = props.borderColor;
 
-  // Itera cobrindo do topo-esquerda além dos limites da tela até a borda inferior-direita
   for (let x = -offsetX; x < canvas.width + size; x += size) {
     for (let y = -offsetY; y < canvas.height + size; y += size) {
-      // Verifica com exatidão se o mouse atual está dentro deste quadrado renderizado
+      
       if (
         currentMousePos &&
         currentMousePos.x >= x &&

@@ -7,10 +7,8 @@ export type TipoOperacao = "PAGAR" | "RECEBER";
 export type StatusConta = "ABERTA" | "QUITADA" | "CANCELADA";
 export type StatusParcela = "PENDENTE" | "PARCIAL" | "LIQUIDADA";
 
-// Filtro de status das listagens: "TODOS" traz ATIVO e INATIVO.
 export type FiltroStatus = StatusCadastro | "TODOS";
 
-// ----- Pessoas (Fornecedor / Cliente / Faturado) -----
 export interface Pessoa {
   id: number;
   razaoSocial: string;
@@ -38,7 +36,6 @@ export interface PessoaFiltros {
   status?: FiltroStatus;
 }
 
-// ----- Classificação (Tipo de Despesa / Tipo de Receita) -----
 export interface CategoriaItem {
   id: number;
   descricao: string;
@@ -61,7 +58,6 @@ export interface CategoriaFiltros {
   status?: FiltroStatus;
 }
 
-// ----- Contas (a Pagar / a Receber) -----
 export interface ContaResumo {
   id: number;
   tipoOperacao: TipoOperacao;
@@ -108,8 +104,7 @@ export interface ContaInput {
 export interface ContaFiltros {
   q?: string;
   tipoOperacao?: TipoOperacao | "";
-  // "ATIVAS" traz tudo que não está CANCELADA (equivalente ao ATIVO dos demais cadastros);
-  // "TODAS" (ou "") traz também as canceladas.
+  
   status?: StatusConta | "ATIVAS" | "TODAS" | "";
   vencimentoDe?: string;
   vencimentoAte?: string;

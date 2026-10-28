@@ -46,7 +46,6 @@ export class ClassificacaoController {
     );
   }
 
-  // Exclusão lógica / reativação: corpo { "ativo": false | true }.
   async alterarStatus(req: Request, res: Response<ApiResponse<CategoriaItem>>): Promise<void> {
     await responder(
       res,

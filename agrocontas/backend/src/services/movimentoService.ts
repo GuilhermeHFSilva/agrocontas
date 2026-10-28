@@ -23,9 +23,6 @@ import {
 } from "../types/cadastros";
 import { StatusCadastro } from "../types/conta";
 
-// Registro de Contas a Pagar / a Receber (MOVIMENTO_CONTAS + MOVIMENTO_PARCELAS).
-// Mantenha este arquivo idêntico a backend/src/services/movimentoService.ts.
-
 const OPERACOES = ["PAGAR", "RECEBER"] as const;
 const STATUS_CONTA = ["ABERTA", "QUITADA", "CANCELADA"] as const;
 const MAX_PARCELAS = 120;
@@ -246,7 +243,6 @@ async function prepararConta(db: Db, input: ContaInput, ignorarId?: number): Pro
     throw new ServiceError(`Uma conta aceita no máximo ${MAX_PARCELAS} parcelas.`);
   }
 
-  // Parcelas numeradas pela ordem de vencimento (1, 2, 3...).
   const parcelas = input.parcelas
     .map((parcela, indice) => ({
       dataVencimento: dataObrigatoria(parcela?.dataVencimento, `Vencimento da parcela ${indice + 1}`),
@@ -287,7 +283,6 @@ function comandosParcelas(
   }));
 }
 
-// A conta e suas parcelas são gravadas juntas (tudo ou nada). O valor total é a soma das parcelas.
 export async function criarConta(db: Db, input: ContaInput): Promise<ContaDetalhe> {
   const conta = await prepararConta(db, input);
 
@@ -326,8 +321,6 @@ export async function criarConta(db: Db, input: ContaInput): Promise<ContaDetalh
   return obterConta(db, criada.id_conta);
 }
 
-// Só contas ABERTAS e sem baixas (MOVIMENTO_FINANCEIRO) podem ser alteradas. As parcelas são redefinidas
-// junto com a conta; o status não muda aqui (campo oculto).
 export async function atualizarConta(db: Db, idBruto: unknown, input: ContaInput): Promise<ContaDetalhe> {
   const atual = await obterConta(db, idBruto);
   if (atual.status !== "ABERTA") {
@@ -364,7 +357,6 @@ export async function atualizarConta(db: Db, idBruto: unknown, input: ContaInput
   return obterConta(db, atual.id);
 }
 
-// Exclusão lógica (ativo = false -> CANCELADA) e reativação (ativo = true -> ABERTA).
 export async function alterarStatusConta(db: Db, idBruto: unknown, ativo: unknown): Promise<ContaDetalhe> {
   if (typeof ativo !== "boolean") throw new ServiceError('Informe "ativo" como verdadeiro ou falso.');
   const atual = await obterConta(db, idBruto);
@@ -377,7 +369,7 @@ export async function alterarStatusConta(db: Db, idBruto: unknown, ativo: unknow
     await db.batch([{ sql: "UPDATE movimento_contas SET status = 'CANCELADA' WHERE id_conta = ?", params: [atual.id] }]);
   } else {
     if (atual.status !== "CANCELADA") return atual;
-    // Ao cancelar, o documento ficou livre para novo lançamento; reativar não pode duplicá-lo.
+    
     await exigirDocumentoLivre(db, atual.fornecedorId, atual.numeroDocumento, atual.tipoOperacao, atual.id);
     await db.batch([{ sql: "UPDATE movimento_contas SET status = 'ABERTA' WHERE id_conta = ?", params: [atual.id] }]);
   }

@@ -130,7 +130,7 @@ function handleClose() {
   >
     <FadeContent :duration="300" direction="up" class="w-full max-w-lg">
       <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-6 shadow-[8px_8px_0px_#1a1a1a] relative">
-        <!-- Header -->
+        
         <div class="flex items-center justify-between pb-4 border-b-2 border-outline mb-5">
           <div class="flex items-center gap-2.5">
             <div class="w-9 h-9 bg-primary-container border-2 border-outline flex items-center justify-center shadow-[2px_2px_0px_#1a1a1a]">
@@ -155,9 +155,8 @@ function handleClose() {
           </button>
         </div>
 
-        <!-- Status Notification Box -->
         <div class="space-y-3 mb-5">
-          <!-- Status Badge -->
+          
           <div
             class="p-3.5 border-2 shadow-[3px_3px_0px_#1a1a1a] flex items-start gap-3 font-mono text-xs"
             :class="hasCustomKey
@@ -195,7 +194,6 @@ function handleClose() {
             </div>
           </div>
 
-          <!-- Operation Feedback Message -->
           <FadeContent v-if="statusMessage" :duration="250" direction="down">
             <div
               class="p-3 border-2 flex items-center gap-2.5 font-mono text-xs"
@@ -211,7 +209,6 @@ function handleClose() {
           </FadeContent>
         </div>
 
-        <!-- Form Body -->
         <div class="space-y-4 mb-6">
           <div>
             <label for="modalApiKeyInput" class="block font-headline font-bold text-xs uppercase tracking-wider text-on-surface mb-1.5">
@@ -249,7 +246,6 @@ function handleClose() {
           </div>
         </div>
 
-        <!-- Actions Toolbar -->
         <div class="pt-4 border-t-2 border-outline flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <ClickSpark sparkColor="#1a1a1a" :sparkCount="6">

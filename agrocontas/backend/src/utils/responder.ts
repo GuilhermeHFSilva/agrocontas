@@ -2,7 +2,6 @@ import { Response } from "express";
 import { ApiResponse } from "../types/nfe";
 import { ServiceError } from "./serviceError";
 
-// Executa uma operação de serviço e a converte em resposta HTTP padronizada ({ success, data, error }).
 export async function responder<T>(
   res: Response<ApiResponse<T>>,
   operacao: () => Promise<T>,

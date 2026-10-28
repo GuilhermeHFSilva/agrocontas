@@ -25,7 +25,7 @@ function formatDate(dateStr: string | undefined | null): string {
 
 <template>
   <div class="space-y-6">
-    <!-- Block 1: Classificação Operacional / Plano de Contas Rural (RF02) -->
+    
     <FadeContent :duration="450" direction="up">
       <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-5 shadow-[5px_5px_0px_#1a1a1a]">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-outline">
@@ -105,9 +105,8 @@ function formatDate(dateStr: string | undefined | null): string {
       </SpotlightCard>
     </FadeContent>
 
-    <!-- Block 2: Parceiros Comerciais (RF01 - Fornecedor e Faturado) -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Fornecedor (Emitente) -->
+      
       <FadeContent :duration="450" :delay="100" direction="up">
         <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-5 shadow-[4px_4px_0px_#1a1a1a] flex flex-col justify-between h-full">
           <div>
@@ -152,7 +151,6 @@ function formatDate(dateStr: string | undefined | null): string {
         </SpotlightCard>
       </FadeContent>
 
-      <!-- Faturado (Destinatário / Titular) -->
       <FadeContent :duration="450" :delay="150" direction="up">
         <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-5 shadow-[4px_4px_0px_#1a1a1a] flex flex-col justify-between h-full">
           <div>
@@ -191,9 +189,8 @@ function formatDate(dateStr: string | undefined | null): string {
       </FadeContent>
     </div>
 
-    <!-- Block 3: Metadados do Documento e Totais Financeiros (RF03) -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Metadados da NF-e -->
+      
       <FadeContent :duration="450" :delay="200" direction="up">
         <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-5 shadow-[4px_4px_0px_#1a1a1a] h-full">
           <div class="flex items-center justify-between pb-3 border-b-2 border-outline mb-4">
@@ -233,7 +230,6 @@ function formatDate(dateStr: string | undefined | null): string {
         </SpotlightCard>
       </FadeContent>
 
-      <!-- Totais Financeiros com CountUp animado -->
       <FadeContent :duration="450" :delay="250" direction="up">
         <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-5 shadow-[4px_4px_0px_#1a1a1a] flex flex-col justify-between h-full">
           <div>
@@ -279,7 +275,6 @@ function formatDate(dateStr: string | undefined | null): string {
       </FadeContent>
     </div>
 
-    <!-- Block 4: Detalhamento de Parcelas (RF04 - Manter MovimentoParcelas) -->
     <FadeContent v-if="data.parcelas && data.parcelas.length > 0" :duration="500" :delay="300" direction="up">
       <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-5 shadow-[5px_5px_0px_#1a1a1a]">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-outline mb-4">
@@ -350,7 +345,6 @@ function formatDate(dateStr: string | undefined | null): string {
       </SpotlightCard>
     </FadeContent>
 
-    <!-- Block 5: Descrição dos Itens / Insumos Rurais -->
     <FadeContent :duration="500" :delay="350" direction="up">
       <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-5 shadow-[4px_4px_0px_#1a1a1a]">
         <div class="flex items-center justify-between pb-3 border-b-2 border-outline mb-3">

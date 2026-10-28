@@ -75,7 +75,7 @@ function formatFileSize(bytes: number): string {
 <template>
   <FadeContent :duration="450" direction="up">
     <SpotlightCard className="border-2 border-outline bg-surface-container-lowest p-5 shadow-[5px_5px_0px_#1a1a1a] mb-6">
-      <!-- Block Head -->
+      
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-outline">
         <div>
           <div class="flex items-center gap-2">
@@ -98,7 +98,6 @@ function formatFileSize(bytes: number): string {
         </div>
       </div>
 
-      <!-- Drop Zone -->
       <div class="mt-5">
         <div
           class="border-2 border-dashed border-outline p-8 text-center cursor-pointer transition-all duration-200 shadow-[2px_2px_0px_#1a1a1a] hover:shadow-[3px_3px_0px_#1a1a1a]"
@@ -132,7 +131,6 @@ function formatFileSize(bytes: number): string {
           </div>
         </div>
 
-        <!-- Selected File Card -->
         <FadeContent v-if="selectedFile" :duration="350" direction="up">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-surface-bright border-2 border-outline shadow-[3px_3px_0px_#1a1a1a] mt-4">
             <div class="flex items-center gap-3 overflow-hidden">
@@ -163,7 +161,6 @@ function formatFileSize(bytes: number): string {
           </div>
         </FadeContent>
 
-        <!-- Action Button -->
         <div class="mt-5">
           <ClickSpark sparkColor="#1a1a1a" :sparkCount="10" :sparkRadius="24">
             <button
