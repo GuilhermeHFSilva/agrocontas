@@ -1,36 +1,91 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
+import ApiKeyModal from "./components/ApiKeyModal.vue";
 import FileUpload from "./components/FileUpload.vue";
 import FormattedViewer from "./components/FormattedViewer.vue";
 import JsonViewer from "./components/JsonViewer.vue";
-import SettingsTab from "./components/SettingsTab.vue";
-import { extractNfe, getSettings, getServerConfig } from "./services/api";
+import UltimaAtualizacaoGithub from "./components/UltimaAtualizacaoGithub.vue";
+import VerificacaoBanco from "./components/VerificacaoBanco.vue";
+import ClassificacoesView from "./views/ClassificacoesView.vue";
+import ContasView from "./views/ContasView.vue";
+import PessoasView from "./views/PessoasView.vue";
+import {
+  BlurText,
+  ClickSpark,
+  DecryptedText,
+  FadeContent,
+  Magnet,
+  Squares,
+} from "./components/bits";
+import { extractNfe, getSettings, getServerConfig, lancarNfe, verificarNfe } from "./services/api";
 import { NfeExtracao } from "./types/nfe";
+import { LancamentoNfe, VerificacaoNfe } from "./types/conta";
 
-const activeNavTab = ref<"extract" | "settings">("extract");
+defineEmits<{ sair: [] }>();
+
+type AppView = "extracao" | "contas" | "pessoas" | "classificacoes";
+
+const NAV_ITEMS: { id: AppView; label: string; icon: string }[] = [
+  { id: "extracao", label: "Extração de NF-e", icon: "upload_file" },
+  { id: "contas", label: "Contas", icon: "receipt_long" },
+  { id: "pessoas", label: "Pessoas", icon: "groups" },
+  { id: "classificacoes", label: "Classificação", icon: "category" },
+];
+
+function viewFromHash(): AppView {
+  const hash = window.location.hash.replace("#", "");
+  return NAV_ITEMS.some((item) => item.id === hash) ? (hash as AppView) : "extracao";
+}
+
+const currentView = ref<AppView>(viewFromHash());
+
+function navigate(view: AppView) {
+  currentView.value = view;
+  window.location.hash = view;
+}
+
+function syncViewFromHash() {
+  currentView.value = viewFromHash();
+}
+
 const activeViewTab = ref<"formatted" | "json">("formatted");
+const isApiKeyModalOpen = ref(false);
 
 const selectedFile = ref<File | null>(null);
 const loading = ref(false);
 const errorMessage = ref("");
 const extractedData = ref<NfeExtracao | null>(null);
+const verificacao = ref<VerificacaoNfe | null>(null);
+const lancamento = ref<LancamentoNfe | null>(null);
+const saving = ref(false);
 const hasApiKey = ref(true);
+const activeModel = ref("gemini-3.5-flash-lite");
 
 onMounted(async () => {
+  window.addEventListener("hashchange", syncViewFromHash);
   await checkKeyAvailability();
 });
 
+onUnmounted(() => {
+  window.removeEventListener("hashchange", syncViewFromHash);
+});
+
 async function checkKeyAvailability() {
-  const settings = getSettings();
-  if (settings.geminiApiKey) {
-    hasApiKey.value = true;
-    return;
-  }
   try {
     const srv = await getServerConfig();
     hasApiKey.value = srv.hasServerKey;
+    if (srv.defaultModel) {
+      activeModel.value = srv.defaultModel;
+    }
   } catch {
     hasApiKey.value = false;
+  }
+  const settings = getSettings();
+  if (settings.geminiModel && settings.geminiModel !== "gemini-3.5-flash-lite") {
+    activeModel.value = settings.geminiModel;
+  }
+  if (settings.geminiApiKey) {
+    hasApiKey.value = true;
   }
 }
 
@@ -44,10 +99,17 @@ async function handleExtract() {
 
   loading.value = true;
   errorMessage.value = "";
+  verificacao.value = null;
+  lancamento.value = null;
 
   try {
-    const data = await extractNfe(selectedFile.value);
-    extractedData.value = data;
+    const result = await extractNfe(selectedFile.value);
+    extractedData.value = result.data;
+    
+    verificacao.value = await verificarNfe(result.data);
+    if (result.model) {
+      activeModel.value = result.model;
+    }
     activeViewTab.value = "formatted";
   } catch (err: any) {
     errorMessage.value = err?.message || "Ocorreu um erro ao extrair os dados da nota fiscal.";
@@ -56,124 +118,297 @@ async function handleExtract() {
     loading.value = false;
   }
 }
+
+async function handleLancar() {
+  if (!extractedData.value) return;
+
+  saving.value = true;
+  errorMessage.value = "";
+
+  try {
+    lancamento.value = await lancarNfe(extractedData.value);
+    verificacao.value = await verificarNfe(extractedData.value);
+  } catch (err: any) {
+    errorMessage.value = err?.message || "Ocorreu um erro ao lançar o registro.";
+  } finally {
+    saving.value = false;
+  }
+}
 </script>
 
 <template>
-  <div class="app-container">
-    <header class="app-header">
-      <div class="app-brand">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-        </svg>
-        AgroContas
-      </div>
-      <h1 class="app-title">Extração de Dados de Nota Fiscal</h1>
-      <p class="app-subtitle">
-        Carregue um PDF de nota fiscal e extraia os dados automaticamente usando IA
-      </p>
-    </header>
+  <div class="relative min-h-screen bg-surface font-body text-on-surface overflow-x-hidden">
+    
+    <Squares
+      :speed="0.25"
+      :squareSize="48"
+      borderColor="rgba(26, 26, 26, 0.05)"
+      hoverFillColor="rgba(255, 204, 0, 0.09)"
+    />
 
-    <nav class="nav-tabs">
-      <button
-        class="nav-tab-btn"
-        :class="{ active: activeNavTab === 'extract' }"
-        @click="activeNavTab = 'extract'"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-        </svg>
-        Extração de NF-e
-      </button>
+    <div class="relative z-10">
+      
+      <header class="border-b-2 border-outline bg-surface-bright/90 backdrop-blur-sm px-4 sm:px-8 py-3.5">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          
+          <div class="flex items-center gap-3">
+            <Magnet :magnetStrength="3" :padding="20">
+              <div class="w-10 h-10 bg-primary-container border-2 border-outline flex items-center justify-center font-headline font-black text-lg text-on-primary-container shadow-[2px_2px_0px_#1a1a1a]">
+                AC
+              </div>
+            </Magnet>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-headline font-black text-base uppercase tracking-tight text-on-surface leading-none">
+                  AgroContas
+                </span>
+                <span class="inline-block w-2 h-2 bg-primary-fixed border border-outline"></span>
+                <span class="bg-surface-container border border-outline px-1.5 py-0.5 text-[10px] font-mono font-bold">
+                  DOO UniRV
+                </span>
+              </div>
+              <p class="text-[11px] font-mono text-on-surface-variant mt-0.5">
+                Gestão Financeira Rural & Extração Fiscal
+              </p>
+            </div>
+          </div>
 
-      <button
-        class="nav-tab-btn"
-        :class="{ active: activeNavTab === 'settings' }"
-        @click="activeNavTab = 'settings'"
-      >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-        </svg>
-        Configurações
-        <span
-          v-if="!hasApiKey"
-          style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"
-          title="Chave API ausente"
-        ></span>
-      </button>
-    </nav>
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 px-2.5 py-1 bg-surface-container border border-outline text-[11px] font-mono text-on-surface">
+              <span>IA:</span>
+              <span class="font-bold">{{ activeModel }}</span>
+              <span
+                class="inline-block w-2 h-2 rounded-full"
+                :class="hasApiKey ? 'bg-agro-green' : 'bg-secondary'"
+                :title="hasApiKey ? 'Chave configurada' : 'Chave não configurada'"
+              ></span>
+            </div>
 
-    <div v-if="activeNavTab === 'extract'">
-      <div v-if="!hasApiKey" class="banner-alert banner-warning">
+            <ClickSpark sparkColor="#1a1a1a">
+              <button
+                class="px-3.5 py-1.5 text-xs font-headline font-bold uppercase border-2 border-outline bg-surface hover:bg-surface-variant text-on-surface transition-all duration-150 flex items-center gap-1.5 cursor-pointer shadow-[2px_2px_0px_#1a1a1a]"
+                @click="isApiKeyModalOpen = true"
+              >
+                <span class="material-symbols-outlined text-sm">key</span>
+                <span>Chave API</span>
+                <span
+                  v-if="!hasApiKey"
+                  class="w-1.5 h-1.5 rounded-full bg-secondary"
+                  title="Configuração de chave pendente"
+                ></span>
+              </button>
+            </ClickSpark>
+
+            <button
+              type="button"
+              class="px-3.5 py-1.5 text-xs font-headline font-bold uppercase border-2 border-outline bg-surface hover:bg-surface-variant text-on-surface flex items-center gap-1.5 cursor-pointer shadow-[2px_2px_0px_#1a1a1a]"
+              @click="$emit('sair')"
+            >
+              <span class="material-symbols-outlined text-sm">logout</span>
+              <span>Sair</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <nav class="border-b-2 border-outline bg-surface-container px-4 sm:px-8" aria-label="Módulos">
+        <div class="max-w-6xl mx-auto flex flex-wrap gap-1.5 py-2">
+          <button
+            v-for="item in NAV_ITEMS"
+            :key="item.id"
+            type="button"
+            class="px-3 py-1.5 text-xs font-headline font-bold uppercase border-2 border-outline flex items-center gap-1.5 cursor-pointer"
+            :class="currentView === item.id
+              ? 'bg-primary-container text-on-primary-container shadow-[2px_2px_0px_#1a1a1a]'
+              : 'bg-surface hover:bg-surface-variant text-on-surface'"
+            :aria-current="currentView === item.id ? 'page' : undefined"
+            @click="navigate(item.id)"
+          >
+            <span class="material-symbols-outlined text-sm">{{ item.icon }}</span>
+            {{ item.label }}
+          </button>
+        </div>
+      </nav>
+
+      <main class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
+        <ContasView v-if="currentView === 'contas'" />
+        <PessoasView v-else-if="currentView === 'pessoas'" />
+        <ClassificacoesView v-else-if="currentView === 'classificacoes'" />
+
+        <div v-show="currentView === 'extracao'">
+        
+        <FadeContent :duration="400" direction="up">
+          <div class="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b-2 border-outline/30">
+            <div>
+              <div class="inline-block px-2 py-0.5 bg-primary-fixed border border-outline text-[10px] font-headline font-black uppercase text-on-primary-fixed mb-1.5 shadow-[1px_1px_0px_#1a1a1a]">
+                <DecryptedText text="INGESTÃO FISCAL INTELIGENTE" :speed="35" />
+              </div>
+              <h1 class="text-xl sm:text-2xl font-headline font-black uppercase tracking-tight text-on-surface">
+                <BlurText
+                  text="Extração Automatizada de DANFE e NF-e"
+                  :delay="25"
+                />
+              </h1>
+              <p class="text-xs font-mono text-on-surface-variant mt-1">
+                Envie o arquivo PDF para processamento semântico instantâneo e desdobramento financeiro.
+              </p>
+            </div>
+
+            <div v-if="selectedFile" class="font-mono text-xs flex items-center gap-2 bg-surface-container px-3 py-1.5 border border-outline shadow-[2px_2px_0px_#1a1a1a] self-start sm:self-auto">
+              <span class="text-on-surface-variant">Arquivo:</span>
+              <strong class="text-on-surface truncate max-w-[200px]">{{ selectedFile.name }}</strong>
+            </div>
+          </div>
+        </FadeContent>
+
         <div>
-          <strong>Atenção:</strong> Chave da API do Google Gemini não identificada. Configure na aba de Configurações para processar seus arquivos.
+          
+          <FadeContent v-if="!hasApiKey" :duration="350" direction="up">
+            <div class="w-full bg-primary-container border-2 border-outline p-4 mb-6 shadow-[3px_3px_0px_#1a1a1a] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-2xl font-bold">warning</span>
+                <div>
+                  <div class="font-headline font-bold text-xs uppercase tracking-wider">
+                    Chave de API do Gemini não detectada
+                  </div>
+                  <div class="text-xs font-mono mt-0.5">
+                    Configure sua chave de API para processar documentos com a inteligência artificial.
+                  </div>
+                </div>
+              </div>
+              <ClickSpark sparkColor="#1a1a1a">
+                <button
+                  class="bg-primary text-on-primary border-2 border-outline px-3.5 py-1.5 text-xs font-headline font-bold uppercase shadow-[2px_2px_0px_#1a1a1a] hover:bg-surface hover:text-on-surface transition-none flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+                  @click="isApiKeyModalOpen = true"
+                >
+                  <span class="material-symbols-outlined text-sm">key</span>
+                  Configurar Chave API
+                </button>
+              </ClickSpark>
+            </div>
+          </FadeContent>
+
+          <FadeContent v-if="errorMessage" :duration="350" direction="up">
+            <div class="w-full bg-secondary-container border-2 border-secondary p-4 mb-6 shadow-[3px_3px_0px_#e63b2e] text-on-surface flex items-start gap-3">
+              <span class="material-symbols-outlined text-xl text-secondary font-bold">error</span>
+              <div class="flex-1">
+                <div class="font-headline font-bold text-xs uppercase tracking-wider text-secondary">
+                  Falha no Processamento
+                </div>
+                <div class="text-xs font-mono mt-0.5">
+                  {{ errorMessage }}
+                </div>
+              </div>
+            </div>
+          </FadeContent>
+
+          <FileUpload
+            :loading="loading"
+            :selected-file="selectedFile"
+            @select-file="handleSelectFile"
+            @extract="handleExtract"
+          />
+
+          <FadeContent v-if="loading" :duration="350" direction="up">
+            <div class="border-2 border-outline bg-surface-container-lowest p-8 shadow-[4px_4px_0px_#1a1a1a] mb-6 text-center">
+              <div class="flex flex-col items-center justify-center gap-3">
+                <span class="brutal-spinner brutal-spinner-lg"></span>
+                <div class="font-headline font-bold text-sm uppercase tracking-wider text-on-surface mt-1">
+                  <DecryptedText text="Processando Documento Fiscal com IA" :speed="25" />
+                </div>
+                <div class="text-xs font-mono text-on-surface-variant">
+                  Enviando PDF • Inferência estruturada via {{ activeModel }}
+                </div>
+                <div class="w-full max-w-sm bg-surface-variant border border-outline h-2 mt-2 overflow-hidden">
+                  <div class="h-full bg-primary-fixed animate-pulse w-full"></div>
+                </div>
+              </div>
+            </div>
+          </FadeContent>
+
+          <div v-if="extractedData && !loading" class="mt-8">
+            
+            <FadeContent :duration="350" direction="up">
+              <div class="border-2 border-outline bg-surface-container-lowest p-3.5 mb-6 shadow-[3px_3px_0px_#1a1a1a] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                  <span class="font-headline font-bold text-xs uppercase tracking-wider text-on-surface">
+                    Visualização:
+                  </span>
+                  <div class="inline-flex gap-1.5">
+                    <ClickSpark sparkColor="#1a1a1a">
+                      <button
+                        class="px-3 py-1 text-xs font-headline font-bold uppercase border-2 border-outline transition-none cursor-pointer"
+                        :class="activeViewTab === 'formatted'
+                          ? 'bg-primary text-on-primary shadow-[2px_2px_0px_#1a1a1a]'
+                          : 'bg-surface hover:bg-surface-variant text-on-surface'"
+                        @click="activeViewTab = 'formatted'"
+                      >
+                        Formatada
+                      </button>
+                    </ClickSpark>
+
+                    <ClickSpark sparkColor="#1a1a1a">
+                      <button
+                        class="px-3 py-1 text-xs font-headline font-bold uppercase border-2 border-outline transition-none cursor-pointer"
+                        :class="activeViewTab === 'json'
+                          ? 'bg-primary text-on-primary shadow-[2px_2px_0px_#1a1a1a]'
+                          : 'bg-surface hover:bg-surface-variant text-on-surface'"
+                        @click="activeViewTab = 'json'"
+                      >
+                        JSON Bruto
+                      </button>
+                    </ClickSpark>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2 font-mono text-xs text-on-surface-variant">
+                  <span class="w-2 h-2 bg-primary"></span>
+                  <span>Nota Fiscal #<strong>{{ extractedData.numeroNotaFiscal || 'N/A' }}</strong></span>
+                </div>
+              </div>
+            </FadeContent>
+
+            <FadeContent v-if="verificacao" :duration="350" direction="up">
+              <VerificacaoBanco
+                :verificacao="verificacao"
+                :lancamento="lancamento"
+                :saving="saving"
+                @lancar="handleLancar"
+              />
+            </FadeContent>
+
+            <FormattedViewer
+              v-if="activeViewTab === 'formatted'"
+              :data="extractedData"
+            />
+
+            <JsonViewer
+              v-if="activeViewTab === 'json'"
+              :data="extractedData"
+            />
+          </div>
         </div>
-        <button class="btn-secondary" style="padding: 0.4rem 0.85rem;" @click="activeNavTab = 'settings'">
-          Ir para Configurações
-        </button>
-      </div>
 
-      <div v-if="errorMessage" class="banner-alert banner-danger">
-        <div>{{ errorMessage }}</div>
-      </div>
-
-      <FileUpload
-        :loading="loading"
-        :selected-file="selectedFile"
-        @select-file="handleSelectFile"
-        @extract="handleExtract"
-      />
-
-      <div v-if="loading" class="card loading-container">
-        <span class="spinner spinner-green" style="width: 2.5rem; height: 2.5rem;"></span>
-        <div class="loading-text">
-          Enviando documento e analisando dados com o modelo Gemini...
-        </div>
-      </div>
-
-      <div v-if="extractedData && !loading" class="card">
-        <div class="card-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          </svg>
-          Dados Extraídos
         </div>
 
-        <div class="subtabs-container">
-          <button
-            class="subtab-btn"
-            :class="{ active: activeViewTab === 'formatted' }"
-            @click="activeViewTab = 'formatted'"
-          >
-            Visualização Formatada
-          </button>
-          <button
-            class="subtab-btn"
-            :class="{ active: activeViewTab === 'json' }"
-            @click="activeViewTab = 'json'"
-          >
-            JSON
-          </button>
-        </div>
-
-        <FormattedViewer
-          v-if="activeViewTab === 'formatted'"
-          :data="extractedData"
-        />
-
-        <JsonViewer
-          v-if="activeViewTab === 'json'"
-          :data="extractedData"
-        />
-      </div>
+        <FadeContent :duration="400" :delay="150" direction="up">
+          <footer class="mt-12 pt-4 border-t-2 border-outline/30 flex flex-col sm:flex-row items-center justify-between text-xs font-mono text-on-surface-variant gap-2">
+            <div>
+              AgroContas • Gestão Financeira Rural • UniRV
+            </div>
+            <div class="flex flex-col items-center sm:items-end gap-3">
+              <UltimaAtualizacaoGithub />
+              <span>IA: <strong>{{ activeModel }}</strong></span>
+            </div>
+          </footer>
+        </FadeContent>
+      </main>
     </div>
 
-    <div v-else-if="activeNavTab === 'settings'">
-      <SettingsTab />
-    </div>
+    <ApiKeyModal
+      :is-open="isApiKeyModalOpen"
+      @close="isApiKeyModalOpen = false"
+      @key-updated="checkKeyAvailability"
+    />
   </div>
 </template>

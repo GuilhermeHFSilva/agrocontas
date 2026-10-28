@@ -1,7 +1,8 @@
 import { ApiResponse, AppSettings, NfeExtracao } from "../types/nfe";
+import { LancamentoNfe, VerificacaoNfe } from "../types/conta";
 
 const STORAGE_KEY = "agrocontas_settings";
-const DEFAULT_MODEL = "gemini-3.6-flash";
+const DEFAULT_MODEL = "gemini-3.5-flash-lite";
 
 function getFallbackApiUrl(): string {
   return import.meta.env.VITE_API_URL || "";
@@ -11,6 +12,15 @@ function buildEndpoint(baseUrl: string, endpointPath: string): string {
   const normalizedBase = baseUrl.trim().replace(/\/+$/, "");
   const normalizedPath = endpointPath.startsWith("/") ? endpointPath : `/${endpointPath}`;
   return `${normalizedBase}${normalizedPath}`;
+}
+
+const OBSOLETE_MODELS = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-3.6-flash", "gemini-1.0-pro"];
+
+function sanitizeModelName(model?: string): string {
+  if (!model || typeof model !== "string") return DEFAULT_MODEL;
+  const trimmed = model.trim();
+  if (OBSOLETE_MODELS.includes(trimmed)) return DEFAULT_MODEL;
+  return trimmed;
 }
 
 export function getSettings(): AppSettings {
@@ -29,7 +39,7 @@ export function getSettings(): AppSettings {
     const parsed = JSON.parse(saved);
     return {
       geminiApiKey: parsed.geminiApiKey || "",
-      geminiModel: parsed.geminiModel || DEFAULT_MODEL,
+      geminiModel: sanitizeModelName(parsed.geminiModel),
       apiUrl: parsed.apiUrl !== undefined ? parsed.apiUrl : defaultApiUrl,
     };
   } catch {
@@ -62,7 +72,7 @@ function createGeminiHeaders(apiKey?: string, model?: string): Record<string, st
   return headers;
 }
 
-export async function extractNfe(file: File): Promise<NfeExtracao> {
+export async function extractNfe(file: File): Promise<{ data: NfeExtracao; model: string }> {
   const settings = getSettings();
   const formData = new FormData();
   formData.append("file", file);
@@ -81,7 +91,10 @@ export async function extractNfe(file: File): Promise<NfeExtracao> {
     throw new Error(data.error || "Falha ao extrair os dados da nota fiscal.");
   }
 
-  return data.data;
+  return {
+    data: data.data,
+    model: data.model || settings.geminiModel,
+  };
 }
 
 export async function testConfig(
@@ -122,4 +135,29 @@ export async function getServerConfig(): Promise<{ hasServerKey: boolean; defaul
   } catch {
     return { hasServerKey: false, defaultModel: DEFAULT_MODEL };
   }
+}
+
+async function postNfe<T>(path: string, nfe: NfeExtracao, fallbackError: string): Promise<T> {
+  const settings = getSettings();
+  const endpoint = buildEndpoint(settings.apiUrl, path);
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(nfe),
+  });
+
+  const data: ApiResponse<T> = await response.json();
+  if (!response.ok || !data.success || !data.data) {
+    throw new Error(data.error || fallbackError);
+  }
+  return data.data;
+}
+
+export function verificarNfe(nfe: NfeExtracao): Promise<VerificacaoNfe> {
+  return postNfe<VerificacaoNfe>("/api/contas/verificar", nfe, "Falha ao consultar o banco de dados.");
+}
+
+export function lancarNfe(nfe: NfeExtracao): Promise<LancamentoNfe> {
+  return postNfe<LancamentoNfe>("/api/contas/lancar", nfe, "Falha ao lançar o registro.");
 }

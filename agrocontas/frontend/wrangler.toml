@@ -4,4 +4,11 @@ compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
 
 [vars]
-GEMINI_MODEL = "gemini-3.6-flash"
+GEMINI_MODEL = "gemini-3.5-flash-lite"
+
+# Banco de dados D1 (SQLite na borda).
+[[d1_databases]]
+binding = "DB"
+database_name = "agrocontas_db"
+database_id = "c88e928e-c95d-4bcf-96c0-7a2b1f6d9b4f"
+migrations_dir = "migrations"

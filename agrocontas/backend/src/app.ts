@@ -3,18 +3,21 @@ import cors from "cors";
 import multer from "multer";
 import { env } from "./config/env";
 import { nfeRoutes } from "./routes/nfeRoutes";
+import { contaRoutes } from "./routes/contaRoutes";
+import { pessoaRoutes } from "./routes/pessoaRoutes";
+import { classificacaoRoutes } from "./routes/classificacaoRoutes";
 
 const app = express();
 
 app.use(
   cors({
     origin: env.CORS_ORIGIN === "*" ? true : env.CORS_ORIGIN,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "x-gemini-api-key", "x-gemini-model"],
   })
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/api/health", (_req: Request, res: Response) => {
@@ -28,6 +31,46 @@ app.get("/api/health", (_req: Request, res: Response) => {
 });
 
 app.use("/api/nfe", nfeRoutes);
+app.use("/api/contas", contaRoutes);
+app.use("/api/pessoas", pessoaRoutes);
+app.use("/api/classificacoes", classificacaoRoutes);
+
+app.post("/api/login", async (req: Request, res: Response) => {
+  try {
+    const { usuario, senha } = req.body || {};
+    if (typeof usuario !== "string" || typeof senha !== "string") {
+      res.status(400).json({ success: false, error: "Usuário e senha são obrigatórios." });
+      return;
+    }
+
+    const { getDb } = await import("./db/connection");
+    const db = getDb();
+    const user = await db.first<{ id_usuario: number; senha: string }>(
+      "SELECT id_usuario, senha FROM usuario WHERE (usuario = ? OR email = ?) AND status = 'ATIVO'",
+      [usuario.trim(), usuario.trim()]
+    );
+
+    if (!user || user.senha !== senha) {
+      res.status(401).json({ success: false, error: "Usuário ou senha incorretos." });
+      return;
+    }
+
+    res.cookie("sessao", "local-session", { httpOnly: true, path: "/" });
+    res.json({ success: true, message: "Login realizado com sucesso." });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message || "Erro no servidor de autenticação." });
+  }
+});
+
+app.get("/api/sessao", (_req: Request, res: Response) => {
+  res.json({ success: true, data: { autenticado: true } });
+});
+
+app.delete("/api/login", (_req: Request, res: Response) => {
+  res.clearCookie("sessao");
+  res.json({ success: true });
+});
+
 
 app.use(
   (err: Error, _req: Request, res: Response, _next: NextFunction): void => {

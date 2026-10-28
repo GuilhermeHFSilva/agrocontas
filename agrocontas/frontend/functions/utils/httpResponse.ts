@@ -2,7 +2,7 @@ import { ApiResponse } from "../../src/types/nfe";
 
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, x-gemini-api-key, x-gemini-model",
   "Content-Type": "application/json",
 };
